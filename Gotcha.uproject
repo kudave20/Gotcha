@@ -1,0 +1,22 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{0B5C56D0-4FA3-24E0-35D6-7EBF06354309}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "Gotcha",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "ModelingToolsEditorMode",
+			"Enabled": true,
+			"TargetAllowList": [
+				"Editor"
+			]
+		}
+	]
+}
