@@ -10,6 +10,7 @@ class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
 class AShooterCharacterBase;
+class UCombatComponent;
 
 /**
  * 
@@ -21,13 +22,18 @@ class GOTCHA_API AShooterPlayerController : public APlayerController
 
 public:
 	AShooterPlayerController();
-	virtual void Tick(float DeltaSeconds) override;
+	virtual void PlayerTick(float DeltaTime) override;
+	virtual void PostInitializeComponents() override;
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
+	virtual void OnPossess(APawn* InPawn) override;
 	
 private:
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<UCombatComponent> Combat;
+	
 	UPROPERTY(EditAnywhere, Category = Input)
 	TObjectPtr<UInputMappingContext> ShooterContext;
 

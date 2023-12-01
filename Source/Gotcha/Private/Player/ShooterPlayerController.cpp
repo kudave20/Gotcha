@@ -6,12 +6,16 @@
 #include "EnhancedInputComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Character/ShooterCharacterBase.h"
+#include "Component/CombatComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 AShooterPlayerController::AShooterPlayerController()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
+
+	Combat = CreateDefaultSubobject<UCombatComponent>(TEXT("Combat"));
+	Combat->SetIsReplicated(true);
 }
 
 void AShooterPlayerController::BeginPlay()
@@ -25,9 +29,19 @@ void AShooterPlayerController::BeginPlay()
 	}
 }
 
-void AShooterPlayerController::Tick(float DeltaSeconds)
+void AShooterPlayerController::PlayerTick(float DeltaTime)
 {
-	Super::Tick(DeltaSeconds);
+	Super::PlayerTick(DeltaTime);
+}
+
+void AShooterPlayerController::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	if (Combat)
+	{
+		Combat->Controller = this;
+	}
 }
 
 void AShooterPlayerController::SetupInputComponent()
@@ -42,6 +56,18 @@ void AShooterPlayerController::SetupInputComponent()
 	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &AShooterPlayerController::Jump);
 	EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &AShooterPlayerController::Crouch);
 	EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Triggered, this, &AShooterPlayerController::Dash);
+}
+
+void AShooterPlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+
+	ControlledCharacter = GetPawn<AShooterCharacterBase>();
+	if (ControlledCharacter && Combat)
+	{
+		AWeapon* PrimaryWeapon = ControlledCharacter->EquipInitialWeapon();
+		Combat->EquippedWeapon = PrimaryWeapon;
+	}
 }
 
 void AShooterPlayerController::Move(const FInputActionValue& InputActionValue)

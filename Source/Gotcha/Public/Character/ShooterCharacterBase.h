@@ -7,6 +7,8 @@
 #include "ShooterCharacterBase.generated.h"
 
 class UCameraComponent;
+class AWeapon;
+class AShooterPlayerController;
 
 UCLASS()
 class GOTCHA_API AShooterCharacterBase : public ACharacter
@@ -18,19 +20,29 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	AWeapon* EquipInitialWeapon();
 	void SetCollisionBetweenCharacter(const ECollisionResponse NewResponse);
 
 protected:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, Category = Camera)
-	UCameraComponent* Camera;
+	TObjectPtr<UCameraComponent> Camera;
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	TSubclassOf<AWeapon> PrimaryGunClass;
+
+	UPROPERTY()
+	AWeapon* PrimaryGun;
 
 private:
+	UPROPERTY()
+	AShooterPlayerController* PlayerController;
+	
 	UFUNCTION(Server, Reliable)
 	void ServerSetCollisionBetweenCharacter(const ECollisionResponse NewResponse);
 	
 public:	
-	FORCEINLINE UCameraComponent* GetCamera() const { return Camera; }
+	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }
 
 };

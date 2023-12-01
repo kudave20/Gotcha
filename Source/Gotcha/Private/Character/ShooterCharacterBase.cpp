@@ -3,8 +3,12 @@
 
 #include "Character/ShooterCharacterBase.h"
 #include "Camera/CameraComponent.h"
+#include "Component/CombatComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Engine/SkeletalMeshSocket.h"
+#include "Player/ShooterPlayerController.h"
+#include "Weapon/Weapon.h"
 
 AShooterCharacterBase::AShooterCharacterBase()
 {
@@ -26,7 +30,6 @@ AShooterCharacterBase::AShooterCharacterBase()
 void AShooterCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 void AShooterCharacterBase::Tick(float DeltaTime)
@@ -39,6 +42,22 @@ void AShooterCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInp
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+}
+
+AWeapon* AShooterCharacterBase::EquipInitialWeapon()
+{
+	if (PrimaryGunClass)
+	{
+		PrimaryGun = GetWorld()->SpawnActor<AWeapon>(PrimaryGunClass);
+	}
+	const USkeletalMeshSocket* HandSocket = GetMesh()->GetSocketByName(FName("RightHandSocket"));
+	if (HandSocket && PrimaryGun)
+	{
+		HandSocket->AttachActor(PrimaryGun, GetMesh());
+		PrimaryGun->SetOwner(this);
+	}
+
+	return PrimaryGun;
 }
 
 void AShooterCharacterBase::SetCollisionBetweenCharacter(const ECollisionResponse NewResponse)
