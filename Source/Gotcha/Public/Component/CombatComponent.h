@@ -19,17 +19,33 @@ class GOTCHA_API UCombatComponent : public UActorComponent
 
 public:
 	UCombatComponent();
-	friend class AShooterPlayerController;
+	friend class AShooterCharacterBase;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	
-	void SwapWeapons();
-	void Reload();
+
+	void FireButtonPressed(bool bPressed);
 
 protected:
 	virtual void BeginPlay() override;
+	
+	void Fire();
+	void SwapWeapons();
+	void Reload();
 
+	UFUNCTION(Server, Reliable)
+	void ServerFire(const FVector_NetQuantize& TraceHitTarget);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastFire(const FVector_NetQuantize& TraceHitTarget);
+
+	void TraceUnderCrosshairs(FHitResult& TraceHitResult);
+	
 	void SetHUDCrosshairs(float DeltaTime);
+
+	UFUNCTION(Server, Reliable)
+	void ServerReload();
+
+	void HandleReload();
 
 private:
 	UPROPERTY()
@@ -50,6 +66,17 @@ private:
 	float CrosshairInAirFactor;
 	float CrosshairAimFactor;
 	float CrosshairShootingFactor;
+	
+	FVector HitTarget;
+
+	FTimerHandle FireTimer;
+	bool bCanFire = true;
+	bool bFireButtonPressed;
+
+	void StartFireTimer();
+	void FireTimerFinished();
+
+	bool CanFire();
 	
 public:	
 	

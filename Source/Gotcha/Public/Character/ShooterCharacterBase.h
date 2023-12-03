@@ -6,9 +6,12 @@
 #include "GameFramework/Character.h"
 #include "ShooterCharacterBase.generated.h"
 
+class UInputMappingContext;
+class UInputAction;
+struct FInputActionValue;
 class UCameraComponent;
 class AWeapon;
-class AShooterPlayerController;
+class UCombatComponent;
 
 UCLASS()
 class GOTCHA_API AShooterCharacterBase : public ACharacter
@@ -19,9 +22,7 @@ public:
 	AShooterCharacterBase();
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-	AWeapon* EquipInitialWeapon();
-	void SetCollisionBetweenCharacter(const ECollisionResponse NewResponse);
+	virtual void PostInitializeComponents() override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -36,13 +37,80 @@ protected:
 	AWeapon* PrimaryGun;
 
 private:
-	UPROPERTY()
-	AShooterPlayerController* PlayerController;
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<UCombatComponent> Combat;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	TObjectPtr<UInputMappingContext> ShooterContext;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	TObjectPtr<UInputAction> MoveAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	TObjectPtr<UInputAction> LookAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	TObjectPtr<UInputAction> JumpAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	TObjectPtr<UInputAction> CrouchAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	TObjectPtr<UInputAction> DashAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	TObjectPtr<UInputAction> FireAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	TObjectPtr<UInputAction> ReloadAction;;
+
+	void Move(const FInputActionValue& InputActionValue);
+	void MoveButtonReleased();
+	void Look(const FInputActionValue& InputActionValue);
+	virtual void Jump() override;
+	void CrouchButtonPressed();
+	void Dash();
+	void Fire();
+	void FireButtonReleased();
+	void Reload();
+
+	void EquipPrimaryWeapon();
+
+	UFUNCTION(Server, Reliable)
+	void ServerLaunchCharacter(const FVector_NetQuantize& LaunchForce);
+
+	FVector JumpDirection;
+	int32 JumpCount = 0;
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	int32 MaxJumpCount = 2;
+
+	FVector DashDirection;
+	int32 DashCount = 0;
+	
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	int32 MaxDashCount = 3;
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	float DashCoolTime = 3.f;
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	float DashForce = 10000.f;
+
+	FTimerHandle DashHandle;
+
+	void DashFinished();
+
+	UFUNCTION(Server, Reliable)
+	void ServerDashFinished();
+	
+	void DashReset();
+	
+	void SetCollisionBetweenCharacter(const ECollisionResponse NewResponse);
 	
 	UFUNCTION(Server, Reliable)
 	void ServerSetCollisionBetweenCharacter(const ECollisionResponse NewResponse);
 	
 public:	
 	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }
-
 };

@@ -2,6 +2,7 @@
 
 
 #include "Weapon/Weapon.h"
+#include "Net/UnrealNetwork.h"
 
 AWeapon::AWeapon()
 {
@@ -9,7 +10,7 @@ AWeapon::AWeapon()
 	bReplicates = true;
 	SetReplicateMovement(true);
 
-	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
+	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	SetRootComponent(WeaponMesh);
 
 	WeaponMesh->SetCollisionResponseToAllChannels(ECR_Block);
@@ -20,10 +21,43 @@ AWeapon::AWeapon()
 void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
+
+	Ammo = MagCapacity;
 }
 
 void AWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+}
+
+void AWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AWeapon, Ammo);
+}
+
+void AWeapon::Fire(const FVector& HitTarget)
+{
+	if (FireAnimation && WeaponMesh)
+	{
+		WeaponMesh->PlayAnimation(FireAnimation, false);
+	}
+	SpendRound();
+}
+
+void AWeapon::SpendRound()
+{
+	Ammo = FMath::Clamp(Ammo - 1, 0, Ammo - 1);
+}
+
+void AWeapon::Reload()
+{
+	Ammo = MagCapacity;
+}
+
+bool AWeapon::IsEmpty()
+{
+	return Ammo <= 0;
 }
 
