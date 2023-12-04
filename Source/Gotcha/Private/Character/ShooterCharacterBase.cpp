@@ -9,6 +9,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Weapon/Weapon.h"
 #include "Component/CombatComponent.h"
+#include "Net/UnrealNetwork.h"
 
 AShooterCharacterBase::AShooterCharacterBase()
 {
@@ -23,6 +24,8 @@ AShooterCharacterBase::AShooterCharacterBase()
 
 	NetUpdateFrequency = 66.f;
 	MinNetUpdateFrequency = 33.f;
+
+	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
 	GetCharacterMovement()->MaxWalkSpeed = 1200.f;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = 600.f;
@@ -45,6 +48,7 @@ void AShooterCharacterBase::BeginPlay()
 
 	if (HasAuthority())
 	{
+		OnTakeAnyDamage.AddDynamic(this, &AShooterCharacterBase::ReceiveDamage);
 		EquipWeapon();
 	}
 }
@@ -80,6 +84,13 @@ void AShooterCharacterBase::PostInitializeComponents()
 	{
 		Combat->Character = this;
 	}
+}
+
+void AShooterCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AShooterCharacterBase, Health);
 }
 
 void AShooterCharacterBase::Move(const FInputActionValue& InputActionValue)
@@ -244,6 +255,12 @@ void AShooterCharacterBase::SwapWeapons()
 	{
 		Combat->SwapWeapons();
 	}
+}
+
+void AShooterCharacterBase::ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatorController, AActor* DamageCauser)
+{
+	Health = FMath::Clamp(Health - Damage, 0.f, MaxHealth);
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, FString::Printf(TEXT("%f"), Health));
 }
 
 void AShooterCharacterBase::EquipWeapon()

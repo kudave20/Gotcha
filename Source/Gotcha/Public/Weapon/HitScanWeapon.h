@@ -6,6 +6,9 @@
 #include "Weapon/Weapon.h"
 #include "HitScanWeapon.generated.h"
 
+class UParticleSystem;
+class USoundCue;
+
 /**
  * 
  */
@@ -18,12 +21,21 @@ public:
 	virtual void Fire(const FVector& HitTarget) override;
 
 protected:
-	FVector TraceEndWithScatter(const FVector& TraceStart, const FVector& HitTarget);
+	void WeaponTraceHit(const FVector& TraceStart, const FVector& HitTarget, FHitResult& OutHit);
+
+	UPROPERTY(EditAnywhere, Category = "Effect")
+	UParticleSystem* ImpactParticles;
+
+	UPROPERTY(EditAnywhere, Category = "Effect")
+	USoundCue* HitSound;
 
 private:
-	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
-	float DistanceToSphere = 800.f;
+	UPROPERTY(EditAnywhere, Category = "Effect")
+	UParticleSystem* BeamParticles;
 
-	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
-	float SphereRadius = 75.f;
+	UPROPERTY(EditAnywhere, Category = "Effect")
+	UParticleSystem* MuzzleFlash;
+
+	UPROPERTY(EditAnywhere, Category = "Effect")
+	USoundCue* FireSound;
 };

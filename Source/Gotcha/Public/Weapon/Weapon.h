@@ -6,7 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "Weapon.generated.h"
 
-#define TRACE_LENGTH 80000.f
+#define TRACE_LENGTH 2000.f
 
 class UTexture2D;
 class UAnimationAsset;
@@ -38,12 +38,6 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = Crosshairs)
 	TObjectPtr<UTexture2D> CrosshairsBottom;
-	
-	UPROPERTY(EditAnywhere, Category = "Properties")
-	float ZoomedFOV = 30.f;
-
-	UPROPERTY(EditAnywhere, Category = "Properties")
-	float ZoomInterpSpeed = 20.f;
 
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	float FireDelay = 1.f;
@@ -56,6 +50,15 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
+	float DistanceToSphere = 800.f;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
+	float SphereRadius = 75.f;
+	
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	float Damage = 10.f;
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Components")

@@ -23,14 +23,18 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void PostInitializeComponents() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
 	virtual void BeginPlay() override;
 
-	UPROPERTY(VisibleAnywhere, Category = Camera)
-	TObjectPtr<UCameraComponent> Camera;
+	UFUNCTION()
+	void ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, class AController* InstigatorController, AActor* DamageCauser);
 
 private:
+	UPROPERTY(VisibleAnywhere, Category = Camera)
+	TObjectPtr<UCameraComponent> Camera;
+	
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UCombatComponent> Combat;
 
@@ -114,6 +118,12 @@ private:
 	
 	UFUNCTION(Server, Reliable)
 	void ServerSetCollisionBetweenCharacter(const ECollisionResponse NewResponse);
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	float MaxHealth = 100.f;
+
+	UPROPERTY(Replicated)
+	float Health = 100.f;
 	
 public:	
 	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }

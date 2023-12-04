@@ -2,7 +2,6 @@
 
 
 #include "Component/CombatComponent.h"
-
 #include "Camera/CameraComponent.h"
 #include "Character/ShooterCharacterBase.h"
 #include "Player/ShooterPlayerController.h"
@@ -11,6 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/SkeletalMeshSocket.h"
+#include "Weapon/Shotgun.h"
 
 UCombatComponent::UCombatComponent()
 {
@@ -58,13 +58,58 @@ void UCombatComponent::Fire()
 	if (CanFire())
 	{
 		bCanFire = false;
-		ServerFire(HitTarget);
+		//ServerFire(HitTarget);
 		if (EquippedWeapon)
 		{
 			CrosshairShootingFactor = 0.75f;
+			if (AShotgun* Shotgun = Cast<AShotgun>(EquippedWeapon))
+			{
+				FireShotgun();
+			}
 		}
 		StartFireTimer();
 	}
+}
+
+void UCombatComponent::FireShotgun()
+{
+	AShotgun* Shotgun = Cast<AShotgun>(EquippedWeapon);
+	if (Shotgun && Character)
+	{
+		TArray<FVector_NetQuantize> HitTargets;
+		Shotgun->ShotgunTraceEndWithScatter(HitTarget, HitTargets);
+		if (!Character->HasAuthority()) ShotgunLocalFire(HitTargets);
+		ServerShotgunFire(HitTargets, EquippedWeapon->FireDelay);
+	}
+}
+
+void UCombatComponent::ShotgunLocalFire(const TArray<FVector_NetQuantize>& TraceHitTargets)
+{
+	AShotgun* Shotgun = Cast<AShotgun>(EquippedWeapon);
+	if (Shotgun == nullptr || Character == nullptr) return;
+
+	Shotgun->FireShotgun(TraceHitTargets);
+}
+
+void UCombatComponent::ServerShotgunFire_Implementation(const TArray<FVector_NetQuantize>& TraceHitTargets, float FireDelay)
+{
+	MulticastShotgunFire(TraceHitTargets);
+}
+
+bool UCombatComponent::ServerShotgunFire_Validate(const TArray<FVector_NetQuantize>& TraceHitTargets, float FireDelay)
+{
+	if (EquippedWeapon)
+	{
+		bool bNearlyEqual = FMath::IsNearlyEqual(EquippedWeapon->FireDelay, FireDelay, 0.001f);
+		return bNearlyEqual;
+	}
+	return true;
+}
+
+void UCombatComponent::MulticastShotgunFire_Implementation(const TArray<FVector_NetQuantize>& TraceHitTargets)
+{
+	if (Character && Character->IsLocallyControlled() && !Character->HasAuthority()) return;
+	ShotgunLocalFire(TraceHitTargets);
 }
 
 void UCombatComponent::StartFireTimer()
@@ -178,13 +223,14 @@ void UCombatComponent::TraceUnderCrosshairs(FHitResult& TraceHitResult)
 		FCollisionQueryParams QueryParams;
 		QueryParams.AddIgnoredActor(Character);
 
-		bool bSuccess = GetWorld()->LineTraceSingleByChannel(
+		GetWorld()->LineTraceSingleByChannel(
 			TraceHitResult,
 			Start,
 			End,
-			ECC_Visibility
+			ECC_Visibility,
+			QueryParams
 		);
-		if (!bSuccess)
+		if (!TraceHitResult.bBlockingHit)
 		{
 			TraceHitResult.ImpactPoint = End;
 		}
