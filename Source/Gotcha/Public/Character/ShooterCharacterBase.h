@@ -30,12 +30,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = Camera)
 	TObjectPtr<UCameraComponent> Camera;
 
-	UPROPERTY(EditAnywhere, Category = "Properties")
-	TSubclassOf<AWeapon> PrimaryGunClass;
-
-	UPROPERTY()
-	AWeapon* PrimaryGun;
-
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UCombatComponent> Combat;
@@ -62,7 +56,10 @@ private:
 	TObjectPtr<UInputAction> FireAction;
 
 	UPROPERTY(EditAnywhere, Category = Input)
-	TObjectPtr<UInputAction> ReloadAction;;
+	TObjectPtr<UInputAction> ReloadAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	TObjectPtr<UInputAction> SwapAction;
 
 	void Move(const FInputActionValue& InputActionValue);
 	void MoveButtonReleased();
@@ -73,8 +70,15 @@ private:
 	void Fire();
 	void FireButtonReleased();
 	void Reload();
+	void SwapWeapons();
 
-	void EquipPrimaryWeapon();
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	TSubclassOf<AWeapon> PrimaryGunClass;
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	TSubclassOf<AWeapon> SecondaryGunClass;
+
+	void EquipWeapon();
 
 	UFUNCTION(Server, Reliable)
 	void ServerLaunchCharacter(const FVector_NetQuantize& LaunchForce);

@@ -39,6 +39,8 @@ void AWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeP
 
 void AWeapon::Fire(const FVector& HitTarget)
 {
+	if (bIsMelee) return;
+	
 	if (FireAnimation && WeaponMesh)
 	{
 		WeaponMesh->PlayAnimation(FireAnimation, false);
@@ -58,6 +60,6 @@ void AWeapon::Reload()
 
 bool AWeapon::IsEmpty()
 {
-	return Ammo <= 0;
+	return !bIsMelee && Ammo <= 0;
 }
 

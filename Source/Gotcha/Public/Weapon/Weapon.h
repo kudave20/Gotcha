@@ -51,6 +51,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	bool bAutomatic;
 
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	bool bIsMelee;
+
 protected:
 	virtual void BeginPlay() override;
 

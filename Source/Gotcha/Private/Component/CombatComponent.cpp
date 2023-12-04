@@ -10,6 +10,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
+#include "Engine/SkeletalMeshSocket.h"
 
 UCombatComponent::UCombatComponent()
 {
@@ -40,6 +41,7 @@ void UCombatComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(UCombatComponent, EquippedWeapon);
+	DOREPLIFETIME(UCombatComponent, SecondaryWeapon);
 }
 
 void UCombatComponent::FireButtonPressed(bool bPressed)
@@ -106,6 +108,20 @@ void UCombatComponent::MulticastFire_Implementation(const FVector_NetQuantize& T
 
 void UCombatComponent::SwapWeapons()
 {
+	ServerSwapWeapons();
+}
+
+void UCombatComponent::ServerSwapWeapons_Implementation()
+{
+	AWeapon* PreviousSecondaryWeapon = SecondaryWeapon;
+	if (EquippedWeapon)
+	{
+		AttachWeaponToBackpack(EquippedWeapon);
+	}
+	if (PreviousSecondaryWeapon)
+	{
+		AttachWeaponToRightHand(PreviousSecondaryWeapon);
+	}
 }
 
 void UCombatComponent::Reload()
@@ -124,6 +140,32 @@ void UCombatComponent::HandleReload()
 {
 	EquippedWeapon->Reload();
 	//Character->PlayReloadMontage();
+}
+
+void UCombatComponent::AttachWeaponToRightHand(AWeapon* WeaponToAttach)
+{
+	if (Character == nullptr) return;
+	
+	const USkeletalMeshSocket* HandSocket = Character->GetMesh()->GetSocketByName(FName("RightHandSocket"));
+	if (HandSocket && WeaponToAttach)
+	{
+		HandSocket->AttachActor(WeaponToAttach, Character->GetMesh());
+		WeaponToAttach->SetOwner(Character);
+		EquippedWeapon = WeaponToAttach;
+	}
+}
+
+void UCombatComponent::AttachWeaponToBackpack(AWeapon* WeaponToAttach)
+{
+	if (Character == nullptr) return;
+	
+	const USkeletalMeshSocket* BackpackSocket = Character->GetMesh()->GetSocketByName(FName("BackpackSocket"));
+	if (BackpackSocket && WeaponToAttach)
+	{
+		BackpackSocket->AttachActor(WeaponToAttach, Character->GetMesh());
+		WeaponToAttach->SetOwner(Character);
+		SecondaryWeapon = WeaponToAttach;
+	}
 }
 
 void UCombatComponent::TraceUnderCrosshairs(FHitResult& TraceHitResult)

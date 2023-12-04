@@ -24,6 +24,8 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	void FireButtonPressed(bool bPressed);
+	void AttachWeaponToRightHand(AWeapon* WeaponToAttach);
+	void AttachWeaponToBackpack(AWeapon* WeaponToAttach);
 
 protected:
 	virtual void BeginPlay() override;
@@ -37,6 +39,9 @@ protected:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastFire(const FVector_NetQuantize& TraceHitTarget);
+
+	UFUNCTION(Server, Reliable)
+	void ServerSwapWeapons();
 
 	void TraceUnderCrosshairs(FHitResult& TraceHitResult);
 	
@@ -59,6 +64,9 @@ private:
 
 	UPROPERTY(Replicated)
 	AWeapon* EquippedWeapon;
+
+	UPROPERTY(Replicated)
+	AWeapon* SecondaryWeapon;
 
 	FHUDPackage HUDPackage;
 

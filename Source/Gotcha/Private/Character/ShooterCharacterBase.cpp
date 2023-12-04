@@ -7,7 +7,6 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Engine/SkeletalMeshSocket.h"
 #include "Weapon/Weapon.h"
 #include "Component/CombatComponent.h"
 
@@ -46,7 +45,7 @@ void AShooterCharacterBase::BeginPlay()
 
 	if (HasAuthority())
 	{
-		EquipPrimaryWeapon();
+		EquipWeapon();
 	}
 }
 
@@ -70,6 +69,7 @@ void AShooterCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Fire);
 	EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Completed, this, &AShooterCharacterBase::FireButtonReleased);
 	EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Reload);
+	EnhancedInputComponent->BindAction(SwapAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::SwapWeapons);
 }
 
 void AShooterCharacterBase::PostInitializeComponents()
@@ -238,34 +238,43 @@ void AShooterCharacterBase::Reload()
 	}
 }
 
-void AShooterCharacterBase::EquipPrimaryWeapon()
+void AShooterCharacterBase::SwapWeapons()
 {
+	if (Combat)
+	{
+		Combat->SwapWeapons();
+	}
+}
+
+void AShooterCharacterBase::EquipWeapon()
+{
+	if (Combat == nullptr) return;
+	
 	if (PrimaryGunClass)
 	{
-		PrimaryGun = GetWorld()->SpawnActor<AWeapon>(PrimaryGunClass);
+		AWeapon* PrimaryGun = GetWorld()->SpawnActor<AWeapon>(PrimaryGunClass);
+		if (PrimaryGun)
+		{
+			Combat->AttachWeaponToRightHand(PrimaryGun);
+		}
 	}
-	const USkeletalMeshSocket* HandSocket = GetMesh()->GetSocketByName(FName("RightHandSocket"));
-	if (HandSocket && PrimaryGun)
+	if (SecondaryGunClass)
 	{
-		HandSocket->AttachActor(PrimaryGun, GetMesh());
-		PrimaryGun->SetOwner(this);
-		Combat->EquippedWeapon = PrimaryGun;
+		AWeapon* SecondaryGun = GetWorld()->SpawnActor<AWeapon>(SecondaryGunClass);
+		if (SecondaryGun)
+		{
+			Combat->AttachWeaponToBackpack(SecondaryGun);
+		}
 	}
 }
 
 void AShooterCharacterBase::SetCollisionBetweenCharacter(const ECollisionResponse NewResponse)
 {
-	if (GetCapsuleComponent())
-	{
-		GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, NewResponse);
-	}
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, NewResponse);
 	ServerSetCollisionBetweenCharacter(NewResponse);
 }
 
 void AShooterCharacterBase::ServerSetCollisionBetweenCharacter_Implementation(const ECollisionResponse NewResponse)
 {
-	if (GetCapsuleComponent())
-	{
-		GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, NewResponse);
-	}
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, NewResponse);
 }
