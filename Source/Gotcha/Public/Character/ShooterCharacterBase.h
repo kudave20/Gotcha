@@ -12,6 +12,7 @@ struct FInputActionValue;
 class UCameraComponent;
 class AWeapon;
 class UCombatComponent;
+class AShooterPlayerController;
 
 UCLASS()
 class GOTCHA_API AShooterCharacterBase : public ACharacter
@@ -122,8 +123,16 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	float MaxHealth = 100.f;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing = OnRep_Health)
 	float Health = 100.f;
+
+	UFUNCTION()
+	void OnRep_Health();
+
+	UPROPERTY()
+	AShooterPlayerController* ShooterPlayerController;
+
+	void UpdateHUDHealth();
 	
 public:	
 	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }

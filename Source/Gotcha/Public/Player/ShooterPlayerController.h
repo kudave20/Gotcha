@@ -6,6 +6,8 @@
 #include "GameFramework/PlayerController.h"
 #include "ShooterPlayerController.generated.h"
 
+class AShooterHUD;
+
 /**
  * 
  */
@@ -18,7 +20,16 @@ public:
 	AShooterPlayerController();
 	virtual void PlayerTick(float DeltaTime) override;
 
+	void SetHUDHealth(float Health, float MaxHealth);
+
 protected:
 	virtual void BeginPlay() override;
+
+private:
+	UPROPERTY()
+	AShooterHUD* ShooterHUD;
+
+	float HUDHealth;
+	float HUDMaxHealth;
 	
 };

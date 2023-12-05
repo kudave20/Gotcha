@@ -10,6 +10,7 @@
 #include "Weapon/Weapon.h"
 #include "Component/CombatComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Player/ShooterPlayerController.h"
 
 AShooterCharacterBase::AShooterCharacterBase()
 {
@@ -260,7 +261,6 @@ void AShooterCharacterBase::SwapWeapons()
 void AShooterCharacterBase::ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatorController, AActor* DamageCauser)
 {
 	Health = FMath::Clamp(Health - Damage, 0.f, MaxHealth);
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, FString::Printf(TEXT("%f"), Health));
 }
 
 void AShooterCharacterBase::EquipWeapon()
@@ -294,4 +294,18 @@ void AShooterCharacterBase::SetCollisionBetweenCharacter(const ECollisionRespons
 void AShooterCharacterBase::ServerSetCollisionBetweenCharacter_Implementation(const ECollisionResponse NewResponse)
 {
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, NewResponse);
+}
+
+void AShooterCharacterBase::OnRep_Health()
+{
+	UpdateHUDHealth();
+}
+
+void AShooterCharacterBase::UpdateHUDHealth()
+{
+	ShooterPlayerController = ShooterPlayerController == nullptr ? Cast<AShooterPlayerController>(Controller) : ShooterPlayerController;
+	if (ShooterPlayerController)
+	{
+		ShooterPlayerController->SetHUDHealth(Health, MaxHealth);
+	}
 }

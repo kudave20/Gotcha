@@ -7,6 +7,8 @@
 #include "ShooterHUD.generated.h"
 
 class UTexture2D;
+class UUserWidget;
+class UCharacterOverlay;
 
 USTRUCT(BlueprintType)
 struct FHUDPackage
@@ -32,6 +34,14 @@ class GOTCHA_API AShooterHUD : public AHUD
 
 public:
 	virtual void DrawHUD() override;
+
+	UPROPERTY(EditAnywhere, Category = "HUD")
+	TSubclassOf<UUserWidget> CharacterOverlayClass;
+
+	UPROPERTY()
+	TObjectPtr<UCharacterOverlay> CharacterOverlay;
+
+	void AddCharacterOverlay();
 
 protected:
 	virtual void BeginPlay() override;
