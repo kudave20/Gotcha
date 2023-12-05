@@ -11,6 +11,7 @@
 #include "Component/CombatComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/ShooterPlayerController.h"
+#include "Game/GotchaGameMode.h"
 
 AShooterCharacterBase::AShooterCharacterBase()
 {
@@ -57,6 +58,8 @@ void AShooterCharacterBase::BeginPlay()
 void AShooterCharacterBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	PollInit();
 }
 
 void AShooterCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -92,10 +95,25 @@ void AShooterCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AShooterCharacterBase, Health);
+	DOREPLIFETIME(AShooterCharacterBase, bDisableGameplay);
+}
+
+void AShooterCharacterBase::PollInit()
+{
+	if (ShooterPlayerController == nullptr)
+	{
+		ShooterPlayerController = ShooterPlayerController == nullptr ? Cast<AShooterPlayerController>(Controller) : ShooterPlayerController;
+		if (ShooterPlayerController)
+		{
+			UpdateHUDHealth();
+		}
+	}
 }
 
 void AShooterCharacterBase::Move(const FInputActionValue& InputActionValue)
 {
+	if (bDisableGameplay) return;
+	
 	const FVector2D InputAxisVector = InputActionValue.Get<FVector2D>();
 	const FRotator Rotation = GetControlRotation();
 	const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
@@ -111,6 +129,8 @@ void AShooterCharacterBase::Move(const FInputActionValue& InputActionValue)
 
 void AShooterCharacterBase::MoveButtonReleased()
 {
+	if (bDisableGameplay) return;
+	
 	if (Camera)
 	{
 		JumpDirection = FVector::UpVector;
@@ -121,6 +141,8 @@ void AShooterCharacterBase::MoveButtonReleased()
 
 void AShooterCharacterBase::Look(const FInputActionValue& InputActionValue)
 {
+	if (bDisableGameplay) return;
+	
 	const FVector2D LookAxisVector = InputActionValue.Get<FVector2D>();
 	
 	AddControllerPitchInput(LookAxisVector.Y);
@@ -129,6 +151,8 @@ void AShooterCharacterBase::Look(const FInputActionValue& InputActionValue)
 
 void AShooterCharacterBase::Jump()
 {
+	if (bDisableGameplay) return;
+	
 	if (bIsCrouched)
 	{
 		UnCrouch();
@@ -154,6 +178,8 @@ void AShooterCharacterBase::Jump()
 
 void AShooterCharacterBase::CrouchButtonPressed()
 {
+	if (bDisableGameplay) return;
+	
 	if (bIsCrouched)
 	{
 		UnCrouch();
@@ -166,6 +192,8 @@ void AShooterCharacterBase::CrouchButtonPressed()
 
 void AShooterCharacterBase::Dash()
 {
+	if (bDisableGameplay) return;
+	
 	if (Camera && DashCount < MaxDashCount)
 	{
 		SetCollisionBetweenCharacter(ECR_Ignore);
@@ -228,6 +256,8 @@ void AShooterCharacterBase::DashReset()
 
 void AShooterCharacterBase::Fire()
 {
+	if (bDisableGameplay) return;
+	
 	if (Combat)
 	{
 		Combat->FireButtonPressed(true);
@@ -236,6 +266,8 @@ void AShooterCharacterBase::Fire()
 
 void AShooterCharacterBase::FireButtonReleased()
 {
+	if (bDisableGameplay) return;
+	
 	if (Combat)
 	{
 		Combat->FireButtonPressed(false);
@@ -244,6 +276,8 @@ void AShooterCharacterBase::FireButtonReleased()
 
 void AShooterCharacterBase::Reload()
 {
+	if (bDisableGameplay) return;
+	
 	if (Combat)
 	{
 		Combat->Reload();
@@ -252,6 +286,8 @@ void AShooterCharacterBase::Reload()
 
 void AShooterCharacterBase::SwapWeapons()
 {
+	if (bDisableGameplay) return;
+	
 	if (Combat)
 	{
 		Combat->SwapWeapons();
@@ -260,7 +296,73 @@ void AShooterCharacterBase::SwapWeapons()
 
 void AShooterCharacterBase::ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatorController, AActor* DamageCauser)
 {
+	GotchaGameMode = GotchaGameMode == nullptr ? GetWorld()->GetAuthGameMode<AGotchaGameMode>() : GotchaGameMode;
+	if (bElimmed || GotchaGameMode == nullptr) return;
+	
 	Health = FMath::Clamp(Health - Damage, 0.f, MaxHealth);
+	
+	if (Health == 0.f)
+	{
+		if (GotchaGameMode)
+		{
+			ShooterPlayerController = ShooterPlayerController == nullptr ? Cast<AShooterPlayerController>(Controller) : ShooterPlayerController;
+			AShooterPlayerController* AttackerController = Cast<AShooterPlayerController>(InstigatorController);
+			GotchaGameMode->PlayerEliminated(this, ShooterPlayerController, AttackerController);
+		}
+	}
+}
+
+void AShooterCharacterBase::Elim(bool bPlayerLeftGame)
+{
+	DestroyWeapons();
+	MulticastElim(bPlayerLeftGame);
+}
+
+void AShooterCharacterBase::MulticastElim_Implementation(bool bPlayerLeftGame)
+{
+	bLeftGame = bPlayerLeftGame;
+	bElimmed = true;
+
+	bDisableGameplay = true;
+	GetCharacterMovement()->DisableMovement();
+	if (Combat)
+	{
+		Combat->FireButtonPressed(false);
+	}
+	
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
+	GetWorldTimerManager().SetTimer(
+		ElimTimer,
+		this,
+		&AShooterCharacterBase::ElimTimerFinished,
+		ElimDelay
+	);
+}
+
+void AShooterCharacterBase::ElimTimerFinished()
+{
+	GotchaGameMode = GotchaGameMode == nullptr ? GetWorld()->GetAuthGameMode<AGotchaGameMode>() : GotchaGameMode;
+	if (GotchaGameMode && !bLeftGame)
+	{
+		GotchaGameMode->RequestRespawn(this, Controller);
+	}
+}
+
+void AShooterCharacterBase::DestroyWeapons()
+{
+	if (Combat)
+	{
+		if (Combat->EquippedWeapon)
+		{
+			Combat->EquippedWeapon->Destroy();
+		}
+		if (Combat->SecondaryWeapon)
+		{
+			Combat->SecondaryWeapon->Destroy();
+		}
+	}
 }
 
 void AShooterCharacterBase::EquipWeapon()

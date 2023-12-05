@@ -24,18 +24,18 @@ protected:
 	void WeaponTraceHit(const FVector& TraceStart, const FVector& HitTarget, FHitResult& OutHit);
 
 	UPROPERTY(EditAnywhere, Category = "Effect")
-	UParticleSystem* ImpactParticles;
+	TObjectPtr<UParticleSystem> ImpactParticles;
 
 	UPROPERTY(EditAnywhere, Category = "Effect")
-	USoundCue* HitSound;
+	TObjectPtr<USoundCue> HitSound;
 
 private:
 	UPROPERTY(EditAnywhere, Category = "Effect")
-	UParticleSystem* BeamParticles;
+	TObjectPtr<UParticleSystem> BeamParticles;
 
 	UPROPERTY(EditAnywhere, Category = "Effect")
-	UParticleSystem* MuzzleFlash;
+	TObjectPtr<UParticleSystem> MuzzleFlash;
 
 	UPROPERTY(EditAnywhere, Category = "Effect")
-	USoundCue* FireSound;
+	TObjectPtr<USoundCue> FireSound;
 };

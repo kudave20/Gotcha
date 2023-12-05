@@ -13,6 +13,7 @@ class UCameraComponent;
 class AWeapon;
 class UCombatComponent;
 class AShooterPlayerController;
+class AGotchaGameMode;
 
 UCLASS()
 class GOTCHA_API AShooterCharacterBase : public ACharacter
@@ -25,12 +26,20 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void PostInitializeComponents() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	void Elim(bool bPlayerLeftGame);
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastElim(bool bPlayerLeftGame);
 
 protected:
 	virtual void BeginPlay() override;
 
 	UFUNCTION()
-	void ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, class AController* InstigatorController, AActor* DamageCauser);
+	void ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatorController, AActor* DamageCauser);
+	
+	void PollInit();
+
+	void DestroyWeapons();
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = Camera)
@@ -109,16 +118,17 @@ private:
 	FTimerHandle DashHandle;
 
 	void DashFinished();
-
 	UFUNCTION(Server, Reliable)
 	void ServerDashFinished();
 	
 	void DashReset();
 	
 	void SetCollisionBetweenCharacter(const ECollisionResponse NewResponse);
-	
 	UFUNCTION(Server, Reliable)
 	void ServerSetCollisionBetweenCharacter(const ECollisionResponse NewResponse);
+
+	UPROPERTY()
+	AGotchaGameMode* GotchaGameMode;
 
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	float MaxHealth = 100.f;
@@ -133,6 +143,20 @@ private:
 	AShooterPlayerController* ShooterPlayerController;
 
 	void UpdateHUDHealth();
+
+	bool bElimmed;
+
+	FTimerHandle ElimTimer;
+
+	UPROPERTY(EditDefaultsOnly)
+	float ElimDelay = 3.f;
+
+	void ElimTimerFinished();
+
+	bool bLeftGame;
+
+	UPROPERTY(Replicated)
+	bool bDisableGameplay;
 	
 public:	
 	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }
