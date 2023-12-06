@@ -39,7 +39,10 @@ void AWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeP
 
 void AWeapon::Fire(const FVector& HitTarget)
 {
-	if (bIsMelee) return;
+	if (bIsMelee)
+	{
+		return;
+	}
 	
 	if (FireAnimation && WeaponMesh)
 	{

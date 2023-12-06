@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "WeaponTypes.h"
 #include "GameFramework/Actor.h"
 #include "Weapon.generated.h"
 
@@ -48,6 +49,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	bool bIsMelee;
 
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	bool bUseScatter;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -74,8 +78,12 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	int32 MagCapacity;
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	EWeaponType WeaponType;
 	
 public:	
 	FORCEINLINE USkeletalMeshComponent* GetWeaponMesh() const { return WeaponMesh; }
 	bool IsEmpty();
+	FORCEINLINE EWeaponType GetWeaponType() const { return WeaponType; }
 };

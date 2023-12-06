@@ -14,6 +14,7 @@ class AWeapon;
 class UCombatComponent;
 class AShooterPlayerController;
 class AGotchaGameMode;
+class UAnimMontage;
 
 UCLASS()
 class GOTCHA_API AShooterCharacterBase : public ACharacter
@@ -30,6 +31,8 @@ public:
 	void Elim(bool bPlayerLeftGame);
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastElim(bool bPlayerLeftGame);
+	
+	void PlayFireMontage();
 
 protected:
 	virtual void BeginPlay() override;
@@ -45,7 +48,7 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = Camera)
 	TObjectPtr<UCameraComponent> Camera;
 	
-	UPROPERTY(VisibleAnywhere, Category = "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Components")
 	TObjectPtr<UCombatComponent> Combat;
 
 	UPROPERTY(EditAnywhere, Category = Input)
@@ -157,7 +160,11 @@ private:
 
 	UPROPERTY(Replicated)
 	bool bDisableGameplay;
+
+	UPROPERTY(EditAnywhere, Category = "Animation")
+	TObjectPtr<UAnimMontage> FireWeaponMontage;
 	
 public:	
 	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }
+	AWeapon* GetEquippedWeapon();
 };

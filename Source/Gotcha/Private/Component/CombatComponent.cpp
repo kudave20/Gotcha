@@ -4,12 +4,14 @@
 #include "Component/CombatComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Character/ShooterCharacterBase.h"
+#include "Components/BoxComponent.h"
 #include "Player/ShooterPlayerController.h"
 #include "Weapon/Weapon.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/SkeletalMeshSocket.h"
+#include "Weapon/MeleeWeapon.h"
 #include "Weapon/Shotgun.h"
 
 UCombatComponent::UCombatComponent()
@@ -58,16 +60,35 @@ void UCombatComponent::Fire()
 	if (CanFire())
 	{
 		bCanFire = false;
-		//ServerFire(HitTarget);
 		if (EquippedWeapon)
 		{
 			CrosshairShootingFactor = 0.75f;
-			if (AShotgun* Shotgun = Cast<AShotgun>(EquippedWeapon))
+			switch (EquippedWeapon->GetWeaponType())
 			{
+			case EWeaponType::EWT_Shotgun:
 				FireShotgun();
+				break;
+			case EWeaponType::EWT_Katana:
+				FireMeleeWeapon();
+				break;
+			default:
+				break;
 			}
 		}
 		StartFireTimer();
+	}
+}
+
+void UCombatComponent::ServerFire_Implementation(const FVector_NetQuantize& TraceHitTarget)
+{
+	MulticastFire(TraceHitTarget);
+}
+
+void UCombatComponent::MulticastFire_Implementation(const FVector_NetQuantize& TraceHitTarget)
+{
+	if (EquippedWeapon)
+	{
+		EquippedWeapon->Fire(TraceHitTarget);
 	}
 }
 
@@ -88,6 +109,7 @@ void UCombatComponent::ShotgunLocalFire(const TArray<FVector_NetQuantize>& Trace
 	AShotgun* Shotgun = Cast<AShotgun>(EquippedWeapon);
 	if (Shotgun == nullptr || Character == nullptr) return;
 
+	if (!Character->HasAuthority()) Character->PlayFireMontage();
 	Shotgun->FireShotgun(TraceHitTargets);
 }
 
@@ -110,6 +132,46 @@ void UCombatComponent::MulticastShotgunFire_Implementation(const TArray<FVector_
 {
 	if (Character && Character->IsLocallyControlled() && !Character->HasAuthority()) return;
 	ShotgunLocalFire(TraceHitTargets);
+}
+
+void UCombatComponent::FireMeleeWeapon()
+{
+	if (EquippedWeapon && Character)
+	{
+		if (!Character->HasAuthority()) MeleeLocalFire();
+		ServerMeleeFire(EquippedWeapon->FireDelay);
+	}
+}
+
+void UCombatComponent::MeleeLocalFire()
+{
+	AMeleeWeapon* MeleeWeapon = Cast<AMeleeWeapon>(EquippedWeapon);
+	if (Character && MeleeWeapon)
+	{
+		Character->PlayFireMontage();
+		MeleeWeapon->FireMeleeWeapon();
+	}
+}
+
+void UCombatComponent::ServerMeleeFire_Implementation(float FireDelay)
+{
+	MulticastMeleeFire();
+}
+
+bool UCombatComponent::ServerMeleeFire_Validate(float FireDelay)
+{
+	if (EquippedWeapon)
+	{
+		bool bNearlyEqual = FMath::IsNearlyEqual(EquippedWeapon->FireDelay, FireDelay, 0.001f);
+		return bNearlyEqual;
+	}
+	return true;
+}
+
+void UCombatComponent::MulticastMeleeFire_Implementation()
+{
+	if (Character && Character->IsLocallyControlled() && !Character->HasAuthority()) return;
+	MeleeLocalFire();
 }
 
 void UCombatComponent::StartFireTimer()
@@ -135,19 +197,6 @@ void UCombatComponent::FireTimerFinished()
 	if (EquippedWeapon->IsEmpty())
 	{
 		Reload();
-	}
-}
-
-void UCombatComponent::ServerFire_Implementation(const FVector_NetQuantize& TraceHitTarget)
-{
-	MulticastFire(TraceHitTarget);
-}
-
-void UCombatComponent::MulticastFire_Implementation(const FVector_NetQuantize& TraceHitTarget)
-{
-	if (EquippedWeapon)
-	{
-		EquippedWeapon->Fire(TraceHitTarget);
 	}
 }
 
@@ -185,6 +234,15 @@ void UCombatComponent::HandleReload()
 {
 	EquippedWeapon->Reload();
 	//Character->PlayReloadMontage();
+}
+
+void UCombatComponent::EquipWeapons(AWeapon* PrimaryGun, AWeapon* SecondaryGun)
+{
+	if (PrimaryGun && SecondaryGun)
+	{
+		AttachWeaponToRightHand(PrimaryGun);
+		AttachWeaponToBackpack(SecondaryGun);
+	}
 }
 
 void UCombatComponent::AttachWeaponToRightHand(AWeapon* WeaponToAttach)
@@ -263,9 +321,7 @@ void UCombatComponent::SetHUDCrosshairs(float DeltaTime)
 			HUDPackage.CrosshairsBottom = nullptr;
 			HUDPackage.CrosshairsTop = nullptr;
 		}
-
-		// Calculate crosshair spread
-		// [0, 600] -> [0, 1]
+		
 		FVector2D WalkSpeedRange(0.f, Character->GetCharacterMovement()->MaxWalkSpeed);
 		FVector2D VelocityMultiplierRange(0.f, 1.f);
 		FVector Velocity = Character->GetVelocity();
@@ -296,6 +352,28 @@ void UCombatComponent::SetHUDCrosshairs(float DeltaTime)
 		HUDPackage.CrosshairsColor = FLinearColor::White;
 
 		HUD->SetHUDPackage(HUDPackage);
+	}
+}
+
+void UCombatComponent::SlashStarted()
+{
+	if (Character == nullptr || !Character->HasAuthority()) return;
+	
+	AMeleeWeapon* MeleeWeapon = Cast<AMeleeWeapon>(EquippedWeapon);
+	if (MeleeWeapon && MeleeWeapon->GetMeleeBox())
+	{
+		MeleeWeapon->GetMeleeBox()->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
+	}
+}
+
+void UCombatComponent::SlashFinished()
+{
+	if (Character == nullptr || !Character->HasAuthority()) return;
+	
+	AMeleeWeapon* MeleeWeapon = Cast<AMeleeWeapon>(EquippedWeapon);
+	if (MeleeWeapon && MeleeWeapon->GetMeleeBox())
+	{
+		MeleeWeapon->GetMeleeBox()->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Ignore);
 	}
 }
 

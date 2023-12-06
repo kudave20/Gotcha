@@ -27,7 +27,12 @@ AShooterCharacterBase::AShooterCharacterBase()
 	NetUpdateFrequency = 66.f;
 	MinNetUpdateFrequency = 33.f;
 
+	GetMesh()->SetCollisionObjectType(ECC_WorldDynamic);
+	GetMesh()->SetCollisionResponseToAllChannels(ECR_Ignore);
 	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+	GetMesh()->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
+	GetMesh()->SetGenerateOverlapEvents(true);
+	GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
 
 	GetCharacterMovement()->MaxWalkSpeed = 1200.f;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = 600.f;
@@ -294,6 +299,32 @@ void AShooterCharacterBase::SwapWeapons()
 	}
 }
 
+void AShooterCharacterBase::PlayFireMontage()
+{
+	if (Combat == nullptr || Combat->EquippedWeapon == nullptr) return;
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && FireWeaponMontage)
+	{
+		AnimInstance->Montage_Play(FireWeaponMontage);
+		FName SectionName;
+		
+		switch (Combat->EquippedWeapon->GetWeaponType())
+		{
+		case EWeaponType::EWT_Shotgun:
+			SectionName = FName("Shotgun");
+			break;
+		case EWeaponType::EWT_Katana:
+			SectionName = FName("Katana");
+			break;
+		default:
+			break;
+		}
+
+		AnimInstance->Montage_JumpToSection(SectionName);
+	}
+}
+
 void AShooterCharacterBase::ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatorController, AActor* DamageCauser)
 {
 	GotchaGameMode = GotchaGameMode == nullptr ? GetWorld()->GetAuthGameMode<AGotchaGameMode>() : GotchaGameMode;
@@ -369,20 +400,13 @@ void AShooterCharacterBase::EquipWeapon()
 {
 	if (Combat == nullptr) return;
 	
-	if (PrimaryGunClass)
+	if (PrimaryGunClass && SecondaryGunClass)
 	{
 		AWeapon* PrimaryGun = GetWorld()->SpawnActor<AWeapon>(PrimaryGunClass);
-		if (PrimaryGun)
-		{
-			Combat->AttachWeaponToRightHand(PrimaryGun);
-		}
-	}
-	if (SecondaryGunClass)
-	{
 		AWeapon* SecondaryGun = GetWorld()->SpawnActor<AWeapon>(SecondaryGunClass);
-		if (SecondaryGun)
+		if (PrimaryGun && SecondaryGun)
 		{
-			Combat->AttachWeaponToBackpack(SecondaryGun);
+			Combat->EquipWeapons(PrimaryGun, SecondaryGun);
 		}
 	}
 }
@@ -410,4 +434,10 @@ void AShooterCharacterBase::UpdateHUDHealth()
 	{
 		ShooterPlayerController->SetHUDHealth(Health, MaxHealth);
 	}
+}
+
+AWeapon* AShooterCharacterBase::GetEquippedWeapon()
+{
+	if (Combat == nullptr) return nullptr;
+	return Combat->EquippedWeapon;
 }

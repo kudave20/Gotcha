@@ -24,33 +24,45 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	void FireButtonPressed(bool bPressed);
-	void AttachWeaponToRightHand(AWeapon* WeaponToAttach);
-	void AttachWeaponToBackpack(AWeapon* WeaponToAttach);
+	void SwapWeapons();
+	void Reload();
+
+	void EquipWeapons(AWeapon* PrimaryGun, AWeapon* SecondaryGun);
+
+	UFUNCTION(BlueprintCallable)
+	void SlashStarted();
+	UFUNCTION(BlueprintCallable)
+	void SlashFinished();
 
 protected:
 	virtual void BeginPlay() override;
 	
 	void Fire();
-	void SwapWeapons();
-	void Reload();
-
 	void FireShotgun();
+	void FireMeleeWeapon();
 	void ShotgunLocalFire(const TArray<FVector_NetQuantize>& TraceHitTargets);
+	void MeleeLocalFire();
 
 	UFUNCTION(Server, Reliable)
 	void ServerFire(const FVector_NetQuantize& TraceHitTarget);
-
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastFire(const FVector_NetQuantize& TraceHitTarget);
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerShotgunFire(const TArray<FVector_NetQuantize>& TraceHitTargets, float FireDelay);
-
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastShotgunFire(const TArray<FVector_NetQuantize>& TraceHitTargets);
 
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerMeleeFire(float FireDelay);
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastMeleeFire();
+	
 	UFUNCTION(Server, Reliable)
 	void ServerSwapWeapons();
+	
+	void AttachWeaponToRightHand(AWeapon* WeaponToAttach);
+	void AttachWeaponToBackpack(AWeapon* WeaponToAttach);
 
 	void TraceUnderCrosshairs(FHitResult& TraceHitResult);
 	
