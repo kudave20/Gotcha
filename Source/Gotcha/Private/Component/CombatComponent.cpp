@@ -11,6 +11,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/SkeletalMeshSocket.h"
+#include "Gotcha/Gotcha.h"
 #include "Weapon/MeleeWeapon.h"
 #include "Weapon/Shotgun.h"
 
@@ -234,6 +235,81 @@ void UCombatComponent::HandleReload()
 {
 	EquippedWeapon->Reload();
 	//Character->PlayReloadMontage();
+}
+
+void UCombatComponent::ParryButtonPressed()
+{
+	if (bIsParrying) return;
+	ServerParry();
+}
+
+void UCombatComponent::ServerParry_Implementation()
+{
+	if (Character == nullptr) return;
+	
+	bIsParrying = true;
+	AWeapon* PreviousSecondaryWeapon = SecondaryWeapon;
+	AttachWeaponToBackpack(EquippedWeapon);
+	AttachWeaponToRightHand(PreviousSecondaryWeapon);
+	
+	Character->GetWorldTimerManager().SetTimer(
+		ParryTimer,
+		this,
+		&UCombatComponent::ParryTimerFinished,
+		Character->GetParryTime()
+	);
+}
+
+
+void UCombatComponent::ParryTimerFinished()
+{
+	bIsParrying = false;
+	AWeapon* PreviousSecondaryWeapon = SecondaryWeapon;
+	AttachWeaponToBackpack(EquippedWeapon);
+	AttachWeaponToRightHand(PreviousSecondaryWeapon);
+}
+
+bool UCombatComponent::Parry(AWeapon* DamageCauser)
+{
+	if (!bIsParrying) return false;
+	
+	if (DamageCauser == nullptr || DamageCauser->GetWeaponType() != EWeaponType::EWT_Shotgun) return false;
+	
+	UWorld* World = GetWorld();
+	if (World == nullptr) return false;
+
+	if (Character && Character->GetCamera())
+	{
+		FVector Direction = Character->GetCamera()->GetForwardVector();
+		FVector Start = Character->GetCamera()->GetComponentLocation();
+		FVector End = Start + Direction * TRACE_LENGTH;
+		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(Character);
+		
+		FHitResult ParryResult;
+		World->LineTraceSingleByChannel(
+			ParryResult,
+			Start,
+			End,
+			ECC_Assist,
+			QueryParams
+		);
+		AShooterCharacterBase* ShooterCharacter = Cast<AShooterCharacterBase>(ParryResult.GetActor());
+		if (ShooterCharacter)
+		{
+			UGameplayStatics::ApplyDamage(
+				ShooterCharacter,
+				ShooterCharacter->GetMaxHealth(),
+				Controller,
+				EquippedWeapon,
+				UDamageType::StaticClass()
+			);
+
+			return true;
+		}
+	}
+	
+	return false;
 }
 
 void UCombatComponent::EquipWeapons(AWeapon* PrimaryGun, AWeapon* SecondaryGun)

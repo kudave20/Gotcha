@@ -9,9 +9,11 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Weapon/Weapon.h"
 #include "Component/CombatComponent.h"
+#include "Components/SphereComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/ShooterPlayerController.h"
 #include "Game/GotchaGameMode.h"
+#include "Gotcha/Gotcha.h"
 
 AShooterCharacterBase::AShooterCharacterBase()
 {
@@ -24,6 +26,13 @@ AShooterCharacterBase::AShooterCharacterBase()
 	Combat = CreateDefaultSubobject<UCombatComponent>(TEXT("Combat"));
 	Combat->SetIsReplicated(true);
 
+	ParryArea = CreateDefaultSubobject<USphereComponent>(TEXT("ParryArea"));
+	ParryArea->SetupAttachment(GetCapsuleComponent());
+	ParryArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	ParryArea->SetCollisionObjectType(ECC_WorldDynamic);
+	ParryArea->SetCollisionResponseToAllChannels(ECR_Ignore);
+	ParryArea->SetCollisionResponseToChannel(ECC_Assist, ECR_Block);
+
 	NetUpdateFrequency = 66.f;
 	MinNetUpdateFrequency = 33.f;
 
@@ -31,6 +40,7 @@ AShooterCharacterBase::AShooterCharacterBase()
 	GetMesh()->SetCollisionResponseToAllChannels(ECR_Ignore);
 	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 	GetMesh()->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
+	GetMesh()->SetCollisionResponseToChannel(ECC_Assist, ECR_Block);
 	GetMesh()->SetGenerateOverlapEvents(true);
 	GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
 
@@ -83,6 +93,7 @@ void AShooterCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Completed, this, &AShooterCharacterBase::FireButtonReleased);
 	EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Reload);
 	EnhancedInputComponent->BindAction(SwapAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::SwapWeapons);
+	EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Parry);
 }
 
 void AShooterCharacterBase::PostInitializeComponents()
@@ -299,6 +310,16 @@ void AShooterCharacterBase::SwapWeapons()
 	}
 }
 
+void AShooterCharacterBase::Parry()
+{
+	if (bDisableGameplay) return;
+
+	if (Combat)
+	{
+		Combat->ParryButtonPressed();
+	}
+}
+
 void AShooterCharacterBase::PlayFireMontage()
 {
 	if (Combat == nullptr || Combat->EquippedWeapon == nullptr) return;
@@ -329,6 +350,12 @@ void AShooterCharacterBase::ReceiveDamage(AActor* DamagedActor, float Damage, co
 {
 	GotchaGameMode = GotchaGameMode == nullptr ? GetWorld()->GetAuthGameMode<AGotchaGameMode>() : GotchaGameMode;
 	if (bElimmed || GotchaGameMode == nullptr) return;
+
+	if (Combat)
+	{
+		AWeapon* DamageCausedWeapon = Cast<AWeapon>(DamageCauser);
+		if (Combat->Parry(DamageCausedWeapon)) return;
+	}
 	
 	Health = FMath::Clamp(Health - Damage, 0.f, MaxHealth);
 	

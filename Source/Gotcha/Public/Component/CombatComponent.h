@@ -26,6 +26,9 @@ public:
 	void FireButtonPressed(bool bPressed);
 	void SwapWeapons();
 	void Reload();
+	void ParryButtonPressed();
+
+	bool Parry(AWeapon* DamageCauser);
 
 	void EquipWeapons(AWeapon* PrimaryGun, AWeapon* SecondaryGun);
 
@@ -60,6 +63,9 @@ protected:
 	
 	UFUNCTION(Server, Reliable)
 	void ServerSwapWeapons();
+
+	UFUNCTION(Server, Reliable)
+	void ServerParry();
 	
 	void AttachWeaponToRightHand(AWeapon* WeaponToAttach);
 	void AttachWeaponToBackpack(AWeapon* WeaponToAttach);
@@ -107,8 +113,12 @@ private:
 
 	bool CanFire();
 	
-public:	
+	bool bIsParrying;
 	
+	FTimerHandle ParryTimer;
 
-		
+	void ParryTimerFinished();
+	
+public:
+	
 };

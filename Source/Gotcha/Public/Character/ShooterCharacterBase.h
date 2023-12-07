@@ -15,6 +15,7 @@ class UCombatComponent;
 class AShooterPlayerController;
 class AGotchaGameMode;
 class UAnimMontage;
+class USphereComponent;
 
 UCLASS()
 class GOTCHA_API AShooterCharacterBase : public ACharacter
@@ -51,6 +52,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Components")
 	TObjectPtr<UCombatComponent> Combat;
 
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<USphereComponent> ParryArea;
+
 	UPROPERTY(EditAnywhere, Category = Input)
 	TObjectPtr<UInputMappingContext> ShooterContext;
 
@@ -78,6 +82,9 @@ private:
 	UPROPERTY(EditAnywhere, Category = Input)
 	TObjectPtr<UInputAction> SwapAction;
 
+	UPROPERTY(EditAnywhere, Category = Input)
+	TObjectPtr<UInputAction> ParryAction;
+
 	void Move(const FInputActionValue& InputActionValue);
 	void MoveButtonReleased();
 	void Look(const FInputActionValue& InputActionValue);
@@ -88,6 +95,7 @@ private:
 	void FireButtonReleased();
 	void Reload();
 	void SwapWeapons();
+	void Parry();
 
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	TSubclassOf<AWeapon> PrimaryGunClass;
@@ -125,7 +133,8 @@ private:
 	void ServerDashFinished();
 	
 	void DashReset();
-	
+
+	UFUNCTION()
 	void SetCollisionBetweenCharacter(const ECollisionResponse NewResponse);
 	UFUNCTION(Server, Reliable)
 	void ServerSetCollisionBetweenCharacter(const ECollisionResponse NewResponse);
@@ -164,7 +173,12 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	TObjectPtr<UAnimMontage> FireWeaponMontage;
 	
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	float ParryTime = 0.3f;
+	
 public:	
 	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }
 	AWeapon* GetEquippedWeapon();
+	FORCEINLINE float GetParryTime() const { return ParryTime; }
+	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 };
