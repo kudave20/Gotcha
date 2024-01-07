@@ -16,6 +16,7 @@ class AShooterPlayerController;
 class AGotchaGameMode;
 class UAnimMontage;
 class USphereComponent;
+class UCableComponent;
 
 UCLASS()
 class GOTCHA_API AShooterCharacterBase : public ACharacter
@@ -53,7 +54,10 @@ private:
 	TObjectPtr<UCombatComponent> Combat;
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
-	TObjectPtr<USphereComponent> ParryArea;
+	TObjectPtr<USphereComponent> AssistArea;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<UCableComponent> Hook;
 
 	UPROPERTY(EditAnywhere, Category = Input)
 	TObjectPtr<UInputMappingContext> ShooterContext;
@@ -85,6 +89,9 @@ private:
 	UPROPERTY(EditAnywhere, Category = Input)
 	TObjectPtr<UInputAction> ParryAction;
 
+	UPROPERTY(EditAnywhere, Category = Input)
+	TObjectPtr<UInputAction> GrappleAction;
+
 	void Move(const FInputActionValue& InputActionValue);
 	void MoveButtonReleased();
 	void Look(const FInputActionValue& InputActionValue);
@@ -96,6 +103,7 @@ private:
 	void Reload();
 	void SwapWeapons();
 	void Parry();
+	void Grapple();
 
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	TSubclassOf<AWeapon> PrimaryGunClass;
@@ -175,6 +183,32 @@ private:
 	
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	float ParryTime = 0.3f;
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	float HookLength = 3000.f;
+
+	UPROPERTY(Replicated)
+	FVector GrabPoint;
+
+	UPROPERTY(Replicated)
+	bool bIsGrappling;
+	
+	void CheckGrapple();
+	void DoGrapple();
+
+	UFUNCTION(Server, Reliable)
+	void ServerGrapple();
+	
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	float GrappleForce = 250000.f;
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	float GrappleCoolTime = 6.f;
+
+	UPROPERTY(Replicated)
+	bool bCanGrapple = true;
+
+	void GrappleFinished();
 	
 public:	
 	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }

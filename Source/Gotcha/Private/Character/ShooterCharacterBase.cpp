@@ -14,6 +14,7 @@
 #include "Player/ShooterPlayerController.h"
 #include "Game/GotchaGameMode.h"
 #include "Gotcha/Gotcha.h"
+#include "CableComponent.h"
 
 AShooterCharacterBase::AShooterCharacterBase()
 {
@@ -26,15 +27,25 @@ AShooterCharacterBase::AShooterCharacterBase()
 	Combat = CreateDefaultSubobject<UCombatComponent>(TEXT("Combat"));
 	Combat->SetIsReplicated(true);
 
-	ParryArea = CreateDefaultSubobject<USphereComponent>(TEXT("ParryArea"));
-	ParryArea->SetupAttachment(GetCapsuleComponent());
-	ParryArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	ParryArea->SetCollisionObjectType(ECC_WorldDynamic);
-	ParryArea->SetCollisionResponseToAllChannels(ECR_Ignore);
-	ParryArea->SetCollisionResponseToChannel(ECC_Assist, ECR_Block);
-
+	AssistArea = CreateDefaultSubobject<USphereComponent>(TEXT("AssistArea"));
+	AssistArea->SetupAttachment(GetCapsuleComponent());
+	AssistArea->SetSphereRadius(128.f);
+	AssistArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	AssistArea->SetCollisionObjectType(ECC_WorldDynamic);
+	AssistArea->SetCollisionResponseToAllChannels(ECR_Ignore);
+	AssistArea->SetCollisionResponseToChannel(ECC_Assist, ECR_Block);
+	
+	Hook = CreateDefaultSubobject<UCableComponent>(TEXT("Hook"));
+	Hook->SetupAttachment(GetCapsuleComponent());
+	Hook->EndLocation = FVector::ZeroVector;
+	Hook->CableLength = 1.f;
+	Hook->SetVisibility(false);
+	Hook->SetIsReplicated(true);
+	
 	NetUpdateFrequency = 66.f;
 	MinNetUpdateFrequency = 33.f;
+
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_StaticMesh, ECR_Ignore);
 
 	GetMesh()->SetCollisionObjectType(ECC_WorldDynamic);
 	GetMesh()->SetCollisionResponseToAllChannels(ECR_Ignore);
@@ -75,6 +86,13 @@ void AShooterCharacterBase::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	PollInit();
+
+	if (HasAuthority())
+	{
+		CheckGrapple();
+	}
+	
+	DoGrapple();
 }
 
 void AShooterCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -94,6 +112,7 @@ void AShooterCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Reload);
 	EnhancedInputComponent->BindAction(SwapAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::SwapWeapons);
 	EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Parry);
+	EnhancedInputComponent->BindAction(GrappleAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Grapple);
 }
 
 void AShooterCharacterBase::PostInitializeComponents()
@@ -112,6 +131,9 @@ void AShooterCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 
 	DOREPLIFETIME(AShooterCharacterBase, Health);
 	DOREPLIFETIME(AShooterCharacterBase, bDisableGameplay);
+	DOREPLIFETIME(AShooterCharacterBase, GrabPoint);
+	DOREPLIFETIME(AShooterCharacterBase, bIsGrappling);
+	DOREPLIFETIME(AShooterCharacterBase, bCanGrapple);
 }
 
 void AShooterCharacterBase::PollInit()
@@ -124,6 +146,44 @@ void AShooterCharacterBase::PollInit()
 			UpdateHUDHealth();
 		}
 	}
+}
+
+void AShooterCharacterBase::CheckGrapple()
+{
+	if (!bIsGrappling) return;
+
+	FVector Direction = (GrabPoint - Camera->GetComponentLocation()).GetSafeNormal();
+	FVector Start = Camera->GetComponentLocation();
+	FVector End = Start + Direction * HookLength;
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+
+	FHitResult GrappleResult;
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+			GrappleResult,
+			Start,
+			End,
+			ECC_Visibility,
+			QueryParams
+		);
+
+	if (GetActorLocation().Equals(GrabPoint, 100.f) || (bHit && !GrappleResult.ImpactPoint.Equals(GrabPoint, 10.f)))
+	{
+		bIsGrappling = false;
+		Hook->SetVisibility(false);
+		GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+	}
+}
+
+void AShooterCharacterBase::DoGrapple()
+{
+	if (!bIsGrappling) return;
+
+	Hook->EndLocation = Hook->GetComponentTransform().InverseTransformPosition(GrabPoint);
+
+	FVector Direction = (GrabPoint - GetActorLocation()).GetSafeNormal();
+	FVector Force = Direction * GrappleForce;
+	GetCharacterMovement()->AddForce(Force);
 }
 
 void AShooterCharacterBase::Move(const FInputActionValue& InputActionValue)
@@ -172,6 +232,14 @@ void AShooterCharacterBase::Jump()
 	if (bIsCrouched)
 	{
 		UnCrouch();
+		return;
+	}
+
+	if (bIsGrappling)
+	{
+		bIsGrappling = false;
+		Hook->SetVisibility(false);
+		GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 		return;
 	}
 		
@@ -318,6 +386,57 @@ void AShooterCharacterBase::Parry()
 	{
 		Combat->ParryButtonPressed();
 	}
+}
+
+void AShooterCharacterBase::Grapple()
+{
+	if (bDisableGameplay) return;
+	
+	if (bCanGrapple)
+	{
+		ServerGrapple();
+	}
+}
+
+void AShooterCharacterBase::ServerGrapple_Implementation()
+{
+	FVector Direction = GetBaseAimRotation().Vector();
+	FVector Start = Camera->GetComponentLocation();
+	FVector End = Start + Direction * HookLength;
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+	
+	FHitResult GrappleResult;
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+			GrappleResult,
+			Start,
+			End,
+			ECC_StaticMesh,
+			QueryParams
+		);
+
+	if (bHit && !GrappleResult.ImpactNormal.Equals(FVector::UpVector))
+	{
+		UnCrouch();
+		GrabPoint = GrappleResult.ImpactPoint;
+		bIsGrappling = true;
+		GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+		Hook->SetVisibility(true);
+		bCanGrapple = false;
+
+		FTimerHandle GrappleTimer;
+		GetWorldTimerManager().SetTimer(
+			GrappleTimer,
+			this,
+			&AShooterCharacterBase::GrappleFinished,
+			GrappleCoolTime
+		);
+	}
+}
+
+void AShooterCharacterBase::GrappleFinished()
+{
+	bCanGrapple = true;
 }
 
 void AShooterCharacterBase::PlayFireMontage()
