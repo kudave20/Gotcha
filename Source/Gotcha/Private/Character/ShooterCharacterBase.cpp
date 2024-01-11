@@ -15,6 +15,8 @@
 #include "Game/GotchaGameMode.h"
 #include "Gotcha/Gotcha.h"
 #include "CableComponent.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "MotionWarpingComponent.h"
 
 AShooterCharacterBase::AShooterCharacterBase()
 {
@@ -41,6 +43,8 @@ AShooterCharacterBase::AShooterCharacterBase()
 	Hook->CableLength = 1.f;
 	Hook->SetVisibility(false);
 	Hook->SetIsReplicated(true);
+
+	MotionWarping = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarping"));
 	
 	NetUpdateFrequency = 66.f;
 	MinNetUpdateFrequency = 33.f;
@@ -90,6 +94,7 @@ void AShooterCharacterBase::Tick(float DeltaTime)
 	if (HasAuthority())
 	{
 		CheckGrapple();
+		CheckMantle();
 	}
 	
 	DoGrapple();
@@ -104,15 +109,16 @@ void AShooterCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Move);
 	EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &AShooterCharacterBase::MoveButtonReleased);
 	EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Look);
-	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Jump);
-	EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::CrouchButtonPressed);
-	EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Dash);
-	EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Fire);
+	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Jump);
+	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &AShooterCharacterBase::JumpButtonReleased);
+	EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AShooterCharacterBase::CrouchButtonPressed);
+	EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Dash);
+	EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Fire);
 	EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Completed, this, &AShooterCharacterBase::FireButtonReleased);
-	EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Reload);
-	EnhancedInputComponent->BindAction(SwapAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::SwapWeapons);
-	EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Parry);
-	EnhancedInputComponent->BindAction(GrappleAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Grapple);
+	EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Reload);
+	EnhancedInputComponent->BindAction(SwapAction, ETriggerEvent::Started, this, &AShooterCharacterBase::SwapWeapons);
+	EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Parry);
+	EnhancedInputComponent->BindAction(GrappleAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Grapple);
 }
 
 void AShooterCharacterBase::PostInitializeComponents()
@@ -134,6 +140,7 @@ void AShooterCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	DOREPLIFETIME(AShooterCharacterBase, GrabPoint);
 	DOREPLIFETIME(AShooterCharacterBase, bIsGrappling);
 	DOREPLIFETIME(AShooterCharacterBase, bCanGrapple);
+	DOREPLIFETIME(AShooterCharacterBase, bIsMantling);
 }
 
 void AShooterCharacterBase::PollInit()
@@ -184,6 +191,119 @@ void AShooterCharacterBase::DoGrapple()
 	FVector Direction = (GrabPoint - GetActorLocation()).GetSafeNormal();
 	FVector Force = Direction * GrappleForce;
 	GetCharacterMovement()->AddForce(Force);
+}
+
+void AShooterCharacterBase::CheckMantle()
+{
+	if (!bJumpButtonHeld || bIsMantling)
+	{
+		return;
+	}
+
+	FVector Direction = GetBaseAimRotation().Vector();
+	FVector Start = Camera->GetComponentLocation();
+	FVector End = Start + Direction * MantleLength;
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+
+	FHitResult MantleResult;
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+			MantleResult,
+			Start,
+			End,
+			ECC_StaticMesh,
+			QueryParams
+		);
+
+	if (bHit)
+	{
+		FVector SphereStart = MantleResult.Location + FVector::UpVector * MantleHeight;
+
+		TArray<AActor*> ActorsToIgnore;
+		FHitResult SphereResult;
+		bool bDetected = UKismetSystemLibrary::SphereTraceSingle(
+				this,
+				SphereStart,
+				MantleResult.Location,
+				10.f,
+				UEngineTypes::ConvertToTraceType(ECC_StaticMesh),
+				false,
+				ActorsToIgnore,
+				EDrawDebugTrace::None,
+				SphereResult,
+				true
+			);
+
+		if (bDetected)
+		{
+			FVector FirstMantlePoint = SphereResult.ImpactPoint;
+			FVector SecondMantlePoint = SphereResult.ImpactPoint + GetActorForwardVector() * GetCapsuleComponent()->GetScaledCapsuleRadius();
+	
+			FVector DeltaZ = FVector::UpVector * GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+			FVector TraceStart = SecondMantlePoint + FVector::UpVector * (GetCapsuleComponent()->GetScaledCapsuleRadius() + 1.f);
+			FVector TraceEnd = SecondMantlePoint + DeltaZ * 2.f - FVector::UpVector * (GetCapsuleComponent()->GetScaledCapsuleRadius() - 1.f);
+
+			FHitResult TraceResult;
+			bool bSuccess = UKismetSystemLibrary::SphereTraceSingle(
+				this,
+				TraceStart,
+				TraceEnd,
+				GetCapsuleComponent()->GetScaledCapsuleRadius(),
+				UEngineTypes::ConvertToTraceType(ECC_StaticMesh),
+				false,
+				ActorsToIgnore,
+				EDrawDebugTrace::None,
+				TraceResult,
+				true
+			);
+
+			if (!bSuccess)
+			{
+				bIsMantling = true;
+				SecondMantlePoint.Z = SphereResult.ImpactPoint.Z;
+				MulticastDoMantle(FirstMantlePoint, SecondMantlePoint);
+			}
+		}
+	}
+}
+
+void AShooterCharacterBase::MulticastDoMantle_Implementation(const FVector_NetQuantize& FirstPoint, const FVector_NetQuantize& SecondPoint)
+{
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+
+	FMotionWarpingTarget FirstTarget;
+	FirstTarget.Name = FName("FirstMantlePoint");
+	FirstTarget.Location = FirstPoint;
+	FirstTarget.Rotation = GetActorRotation();
+	MotionWarping->AddOrUpdateWarpTarget(FirstTarget);
+
+	FMotionWarpingTarget SecondTarget;
+	SecondTarget.Name = FName("SecondMantlePoint");
+	SecondTarget.Location = SecondPoint;
+	SecondTarget.Rotation = GetActorRotation();
+	MotionWarping->AddOrUpdateWarpTarget(SecondTarget);
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && MantleMontage)
+	{
+		AnimInstance->Montage_Play(MantleMontage);
+
+		FTimerHandle MantleTimer;
+		GetWorldTimerManager().SetTimer(
+			MantleTimer,
+			this,
+			&AShooterCharacterBase::MantleFinished,
+			MantleMontageLength
+		);
+	}
+}
+
+void AShooterCharacterBase::MantleFinished()
+{
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+	bIsMantling = false;
 }
 
 void AShooterCharacterBase::Move(const FInputActionValue& InputActionValue)
@@ -242,6 +362,8 @@ void AShooterCharacterBase::Jump()
 		GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 		return;
 	}
+
+	ServerHoldJumpButton();
 		
 	if (JumpCount >= 1 && JumpCount < MaxJumpCount && !CanJump())
 	{
@@ -258,6 +380,23 @@ void AShooterCharacterBase::Jump()
 		Super::Jump();
 		JumpCount = 1;
 	}
+}
+
+void AShooterCharacterBase::ServerHoldJumpButton_Implementation()
+{
+	bJumpButtonHeld = true;
+}
+
+void AShooterCharacterBase::JumpButtonReleased()
+{
+	if (bDisableGameplay) return;
+	
+	ServerReleaseJumpButton();
+}
+
+void AShooterCharacterBase::ServerReleaseJumpButton_Implementation()
+{
+	bJumpButtonHeld = false;
 }
 
 void AShooterCharacterBase::CrouchButtonPressed()

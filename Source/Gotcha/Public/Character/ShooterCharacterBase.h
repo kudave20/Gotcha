@@ -17,6 +17,7 @@ class AGotchaGameMode;
 class UAnimMontage;
 class USphereComponent;
 class UCableComponent;
+class UMotionWarpingComponent;
 
 UCLASS()
 class GOTCHA_API AShooterCharacterBase : public ACharacter
@@ -59,6 +60,9 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UCableComponent> Hook;
 
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<UMotionWarpingComponent> MotionWarping;
+
 	UPROPERTY(EditAnywhere, Category = Input)
 	TObjectPtr<UInputMappingContext> ShooterContext;
 
@@ -96,6 +100,7 @@ private:
 	void MoveButtonReleased();
 	void Look(const FInputActionValue& InputActionValue);
 	virtual void Jump() override;
+	void JumpButtonReleased();
 	void CrouchButtonPressed();
 	void Dash();
 	void Fire();
@@ -168,7 +173,7 @@ private:
 
 	FTimerHandle ElimTimer;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Properties")
 	float ElimDelay = 3.f;
 
 	void ElimTimerFinished();
@@ -188,7 +193,7 @@ private:
 	float HookLength = 3000.f;
 
 	UPROPERTY(Replicated)
-	FVector GrabPoint;
+	FVector_NetQuantize GrabPoint;
 
 	UPROPERTY(Replicated)
 	bool bIsGrappling;
@@ -209,6 +214,34 @@ private:
 	bool bCanGrapple = true;
 
 	void GrappleFinished();
+	
+	bool bJumpButtonHeld;
+
+	UFUNCTION(Server, Reliable)
+	void ServerHoldJumpButton();
+	UFUNCTION(Server, Reliable)
+	void ServerReleaseJumpButton();
+	
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	float MantleLength = 150.f;
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	float MantleHeight = 60.f;
+
+	void CheckMantle();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastDoMantle(const FVector_NetQuantize& FirstPoint, const FVector_NetQuantize& SecondPoint);
+
+	UPROPERTY(Replicated)
+	bool bIsMantling;
+
+	UPROPERTY(EditAnywhere, Category = "Animation")
+	TObjectPtr<UAnimMontage> MantleMontage;
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	float MantleMontageLength = 1.1f;
+
+	void MantleFinished();
 	
 public:	
 	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }
