@@ -15,6 +15,7 @@ class GOTCHA_API ATeamGameMode : public AGotchaGameMode
 	GENERATED_BODY()
 
 public:
+	ATeamGameMode();
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void Logout(AController* Exiting) override;
 

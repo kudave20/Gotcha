@@ -7,6 +7,8 @@
 #include "GotchaType/Team.h"
 #include "GotchaGameState.generated.h"
 
+class AGotchaPlayerState;
+
 /**
  * 
  */
@@ -16,6 +18,10 @@ class GOTCHA_API AGotchaGameState : public AGameState
 	GENERATED_BODY()
 
 public:
+	TArray<AGotchaPlayerState*> TopPlayers;
+
+	ETeam TopTeam;
+	
 	void ScoreTeam(ETeam Team);
 
 	TMap<ETeam, TArray<APlayerState*>> Teams;

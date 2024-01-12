@@ -37,6 +37,9 @@ public:
 	
 	void PlayFireMontage();
 
+	UPROPERTY(Replicated)
+	bool bDisableGameplay;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -180,9 +183,6 @@ private:
 
 	bool bLeftGame;
 
-	UPROPERTY(Replicated)
-	bool bDisableGameplay;
-
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	TObjectPtr<UAnimMontage> FireWeaponMontage;
 	
@@ -248,5 +248,6 @@ public:
 	AWeapon* GetEquippedWeapon();
 	FORCEINLINE float GetParryTime() const { return ParryTime; }
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
+	FORCEINLINE TObjectPtr<UCombatComponent> GetCombat() const { return Combat; }
 	
 };

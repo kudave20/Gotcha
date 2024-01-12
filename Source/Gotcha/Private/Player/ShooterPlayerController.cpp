@@ -5,11 +5,13 @@
 #include "HUD/ShooterHUD.h"
 #include "HUD/CharacterOverlay.h"
 #include "Components/TextBlock.h"
+#include "Game/GotchaGameMode.h"
+#include "Character/ShooterCharacterBase.h"
+#include "Component/CombatComponent.h"
 
 AShooterPlayerController::AShooterPlayerController()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	// bReplicates = true;
 }
 
 void AShooterPlayerController::BeginPlay()
@@ -39,5 +41,66 @@ void AShooterPlayerController::SetHUDHealth(float Health, float MaxHealth)
 	{
 		HUDHealth = Health;
 		HUDMaxHealth = MaxHealth;
+	}
+}
+
+void AShooterPlayerController::OnMatchStateSet(FName State, bool bTeamsMatch)
+{
+	MatchState = State;
+
+	if (MatchState == MatchState::InProgress)
+	{
+		HandleMatchHasStarted(bTeamsMatch);
+	}
+	else if (MatchState == MatchState::Ending)
+	{
+		HandleEnding();
+	}
+}
+
+void AShooterPlayerController::HandleMatchHasStarted(bool bTeamsMatch)
+{
+	ShooterHUD = ShooterHUD == nullptr ? Cast<AShooterHUD>(GetHUD()) : ShooterHUD;
+	if (ShooterHUD)
+	{
+		if (ShooterHUD->CharacterOverlay == nullptr) ShooterHUD->AddCharacterOverlay();
+		if (!HasAuthority()) return;
+		
+		if (bTeamsMatch)
+		{
+			InitTeamScores();
+		}
+		else
+		{
+			HideTeamScores();
+		}
+	}
+}
+
+void AShooterPlayerController::InitTeamScores()
+{
+	/*
+	 * Show team scores.
+	 */
+}
+
+void AShooterPlayerController::HideTeamScores()
+{
+	/*
+	 * Hide team scores.
+	 */
+}
+
+void AShooterPlayerController::HandleEnding()
+{
+	/* 
+	 * Should show the game result.
+	*/
+	
+	AShooterCharacterBase* ShooterCharacter = Cast<AShooterCharacterBase>(GetPawn());
+	if (ShooterCharacter && ShooterCharacter->GetCombat())
+	{
+		ShooterCharacter->bDisableGameplay = true;
+		ShooterCharacter->GetCombat()->FireButtonPressed(false);
 	}
 }

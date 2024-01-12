@@ -2,15 +2,19 @@
 
 
 #include "Game/TeamGameMode.h"
-#include "Kismet/GameplayStatics.h"
 #include "Game/GotchaGameState.h"
 #include "Player/GotchaPlayerState.h"
+
+ATeamGameMode::ATeamGameMode()
+{
+	bTeamsMatch = true;
+}
 
 void ATeamGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 
-	AGotchaGameState* GGameState = Cast<AGotchaGameState>(UGameplayStatics::GetGameState(this));
+	AGotchaGameState* GGameState = Cast<AGotchaGameState>(GameState);
 	if (GGameState)
 	{
 		AGotchaPlayerState* GPState = NewPlayer->GetPlayerState<AGotchaPlayerState>();
@@ -47,7 +51,7 @@ void ATeamGameMode::PostLogin(APlayerController* NewPlayer)
 
 void ATeamGameMode::Logout(AController* Exiting)
 {
-	AGotchaGameState* GGameState = Cast<AGotchaGameState>(UGameplayStatics::GetGameState(this));
+	AGotchaGameState* GGameState = Cast<AGotchaGameState>(GameState);
 	AGotchaPlayerState* GPState = Exiting->GetPlayerState<AGotchaPlayerState>();
 	if (GGameState && GPState)
 	{
