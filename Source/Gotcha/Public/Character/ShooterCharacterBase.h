@@ -248,4 +248,5 @@ public:
 	AWeapon* GetEquippedWeapon();
 	FORCEINLINE float GetParryTime() const { return ParryTime; }
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
+	
 };

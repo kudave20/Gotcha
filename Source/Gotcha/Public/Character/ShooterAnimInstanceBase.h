@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
-#include "Weapon/WeaponTypes.h"
+#include "GotchaType/WeaponTypes.h"
 #include "ShooterAnimInstanceBase.generated.h"
 
 class AShooterCharacterBase;
