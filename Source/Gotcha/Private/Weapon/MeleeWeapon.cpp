@@ -17,13 +17,15 @@ AMeleeWeapon::AMeleeWeapon()
 
 	BoxTraceEnd = CreateDefaultSubobject<USceneComponent>(TEXT("BoxTraceEnd"));
 	BoxTraceEnd->SetupAttachment(GetRootComponent());
+
+	bIsMelee = true;
 }
 
 void AMeleeWeapon::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (HasAuthority() && MeleeBox)
+	if (HasAuthority() && MeleeBox && bCanFire)
 	{
 		MeleeBox->OnComponentBeginOverlap.AddDynamic(this, &AMeleeWeapon::OnBoxOverlap);
 	}
@@ -72,5 +74,7 @@ void AMeleeWeapon::BoxTrace(FHitResult& BoxHit)
 
 void AMeleeWeapon::FireMeleeWeapon()
 {
+	if (!bCanFire) return;
+	
 	AWeapon::Fire(FVector());
 }

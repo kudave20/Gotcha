@@ -3,7 +3,8 @@
 
 #include "Game/TeamGameMode.h"
 #include "Game/GotchaGameState.h"
-#include "Player/GotchaPlayerState.h"
+#include "Player/ShooterPlayerState.h"
+#include "Player/ShooterPlayerController.h"
 
 ATeamGameMode::ATeamGameMode()
 {
@@ -17,34 +18,64 @@ void ATeamGameMode::PostLogin(APlayerController* NewPlayer)
 	AGotchaGameState* GGameState = Cast<AGotchaGameState>(GameState);
 	if (GGameState)
 	{
-		AGotchaPlayerState* GPState = NewPlayer->GetPlayerState<AGotchaPlayerState>();
-		if (GPState && GPState->GetTeam() == ETeam::ET_NoTeam)
+		AShooterPlayerState* SPState = NewPlayer->GetPlayerState<AShooterPlayerState>();
+		if (SPState && SPState->GetTeam() == ETeam::ET_NoTeam)
 		{
 			int32 MinNumber = TeamMemberLimit;
 			ETeam TeamToJoin = ETeam::ET_NoTeam;
-			
-			if (GGameState->Teams[ETeam::ET_RedTeam].Num() < MinNumber)
+
+			if (!GGameState->Teams.Contains(ETeam::ET_RedTeam))
+			{
+				MinNumber = 0;
+				TeamToJoin = ETeam::ET_RedTeam;
+			}
+			else if (GGameState->Teams[ETeam::ET_RedTeam].Num() < MinNumber)
 			{
 				MinNumber = GGameState->Teams[ETeam::ET_RedTeam].Num();
 				TeamToJoin = ETeam::ET_RedTeam;
 			}
-			if (GGameState->Teams[ETeam::ET_BlueTeam].Num() < MinNumber)
+			if (!GGameState->Teams.Contains(ETeam::ET_BlueTeam))
+			{
+				MinNumber = 0;
+				TeamToJoin = ETeam::ET_BlueTeam;
+			}
+			else if (GGameState->Teams[ETeam::ET_BlueTeam].Num() < MinNumber)
 			{
 				MinNumber = GGameState->Teams[ETeam::ET_BlueTeam].Num();
 				TeamToJoin = ETeam::ET_BlueTeam;
 			}
-			if (GGameState->Teams[ETeam::ET_GreenTeam].Num() < MinNumber)
+			if (!GGameState->Teams.Contains(ETeam::ET_GreenTeam))
+			{
+				MinNumber = 0;
+				TeamToJoin = ETeam::ET_GreenTeam;
+			}
+			else if (GGameState->Teams[ETeam::ET_GreenTeam].Num() < MinNumber)
 			{
 				MinNumber = GGameState->Teams[ETeam::ET_GreenTeam].Num();
 				TeamToJoin = ETeam::ET_GreenTeam;
 			}
-			if (GGameState->Teams[ETeam::ET_YellowTeam].Num() < MinNumber)
+			if (!GGameState->Teams.Contains(ETeam::ET_YellowTeam))
 			{
+				// MinNumber = 0;
+				TeamToJoin = ETeam::ET_YellowTeam;
+			}
+			else if (GGameState->Teams[ETeam::ET_YellowTeam].Num() < MinNumber)
+			{
+				// MinNumber = GGameState->Teams[ETeam::ET_YellowTeam].Num();
 				TeamToJoin = ETeam::ET_YellowTeam;
 			}
 
-			GGameState->Teams[TeamToJoin].AddUnique(GPState);
-			GPState->SetTeam(TeamToJoin);
+			if (TeamToJoin == ETeam::ET_NoTeam)
+			{
+				/*
+				 * Make player spectator.
+				 */
+			}
+			else
+			{
+				GGameState->Teams[TeamToJoin].AddUnique(SPState);
+				SPState->SetTeam(TeamToJoin);
+			}
 		}
 	}
 }
@@ -52,24 +83,21 @@ void ATeamGameMode::PostLogin(APlayerController* NewPlayer)
 void ATeamGameMode::Logout(AController* Exiting)
 {
 	AGotchaGameState* GGameState = Cast<AGotchaGameState>(GameState);
-	AGotchaPlayerState* GPState = Exiting->GetPlayerState<AGotchaPlayerState>();
-	if (GGameState && GPState)
+	AShooterPlayerState* SPState = Exiting->GetPlayerState<AShooterPlayerState>();
+	if (GGameState && SPState)
 	{
-		if (GGameState->Teams[ETeam::ET_RedTeam].Contains(GPState))
-		{
-			GGameState->Teams[ETeam::ET_RedTeam].Remove(GPState);
-		}
-		if (GGameState->Teams[ETeam::ET_BlueTeam].Contains(GPState))
-		{
-			GGameState->Teams[ETeam::ET_BlueTeam].Remove(GPState);
-		}
-		if (GGameState->Teams[ETeam::ET_GreenTeam].Contains(GPState))
-		{
-			GGameState->Teams[ETeam::ET_GreenTeam].Remove(GPState);
-		}
-		if (GGameState->Teams[ETeam::ET_YellowTeam].Contains(GPState))
-		{
-			GGameState->Teams[ETeam::ET_YellowTeam].Remove(GPState);
-		}
+		GGameState->RemoveFromTeam(SPState);
+	}
+}
+
+void ATeamGameMode::PlayerEliminated(AShooterCharacterBase* ElimmedCharacter, AShooterPlayerController* VictimController, AShooterPlayerController* AttackerController)
+{
+	Super::PlayerEliminated(ElimmedCharacter, VictimController, AttackerController);
+
+	AGotchaGameState* GGameState = Cast<AGotchaGameState>(GameState);
+	AShooterPlayerState* AttackerPlayerState = AttackerController ? Cast<AShooterPlayerState>(AttackerController->PlayerState) : nullptr;
+	if (GGameState && AttackerPlayerState)
+	{
+		GGameState->ScoreTeam(AttackerPlayerState->GetTeam());
 	}
 }

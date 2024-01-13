@@ -40,6 +40,8 @@ public:
 	UPROPERTY(Replicated)
 	bool bDisableGameplay;
 
+	void HoldFlag();
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -112,6 +114,7 @@ private:
 	void SwapWeapons();
 	void Parry();
 	void Grapple();
+	void Interact();
 
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	TSubclassOf<AWeapon> PrimaryGunClass;
@@ -242,6 +245,14 @@ private:
 	float MantleMontageLength = 1.1f;
 
 	void MantleFinished();
+
+	bool bIsHoldingFlag;
+
+	UFUNCTION(Server, Reliable)
+	void ServerInteract();
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	float InteractLength = 600.f;
 	
 public:	
 	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }

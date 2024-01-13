@@ -3,9 +3,11 @@
 
 #include "Game/GotchaGameMode.h"
 #include "Character/ShooterCharacter.h"
+#include "Game/GotchaGameState.h"
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/ShooterPlayerController.h"
+#include "Player/ShooterPlayerState.h"
 
 namespace MatchState
 {
@@ -57,10 +59,19 @@ void AGotchaGameMode::OnMatchStateSet()
 
 void AGotchaGameMode::PlayerEliminated(AShooterCharacterBase* ElimmedCharacter, AShooterPlayerController* VictimController, AShooterPlayerController* AttackerController)
 {
+	AShooterPlayerState* AttackerPlayerState = AttackerController ? Cast<AShooterPlayerState>(AttackerController->PlayerState) : nullptr;
+	AGotchaGameState* GotchaGameState = GetGameState<AGotchaGameState>();
+	if (GotchaGameState && AttackerPlayerState)
+	{
+		AttackerPlayerState->AddToScore(1.f);
+		GotchaGameState->UpdateTopScore(AttackerPlayerState);
+	}
+	
 	if (ElimmedCharacter)
 	{
 		ElimmedCharacter->Elim(false);
 	}
+	
 }
 
 void AGotchaGameMode::RequestRespawn(ACharacter* ElimmedCharacter, AController* ElimmedController)

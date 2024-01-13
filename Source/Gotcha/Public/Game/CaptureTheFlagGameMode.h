@@ -6,7 +6,7 @@
 #include "Game/TeamGameMode.h"
 #include "CaptureTheFlagGameMode.generated.h"
 
-class AGotchaPlayerState;
+class AShooterPlayerState;
 
 /**
  * 
@@ -17,6 +17,7 @@ class GOTCHA_API ACaptureTheFlagGameMode : public ATeamGameMode
 	GENERATED_BODY()
 
 public:
-	void FlagCaptured(AGotchaPlayerState* ScoringPlayer);
+	virtual void PlayerEliminated(AShooterCharacterBase* ElimmedCharacter, AShooterPlayerController* VictimController, AShooterPlayerController* AttackerController);
+	void FlagCaptured(AShooterPlayerState* ScoringPlayer);
 	
 };

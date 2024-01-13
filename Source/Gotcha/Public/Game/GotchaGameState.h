@@ -7,7 +7,7 @@
 #include "GotchaType/Team.h"
 #include "GotchaGameState.generated.h"
 
-class AGotchaPlayerState;
+class AShooterPlayerState;
 
 /**
  * 
@@ -18,13 +18,22 @@ class GOTCHA_API AGotchaGameState : public AGameState
 	GENERATED_BODY()
 
 public:
-	TArray<AGotchaPlayerState*> TopPlayers;
+	void UpdateTopScore(AShooterPlayerState* ScoringPlayer);
+	
+	TArray<AShooterPlayerState*> TopPlayers;
 
-	ETeam TopTeam;
+	TArray<ETeam> TopTeams;
 	
 	void ScoreTeam(ETeam Team);
 
 	TMap<ETeam, TArray<APlayerState*>> Teams;
 
 	TMap<ETeam, float> TeamScores;
+
+	void RemoveFromTeam(AShooterPlayerState* PlayerToRemove);
+
+private:
+	float TopScore = 0.f;
+	float TopTeamScore = 0.f;
+	
 };

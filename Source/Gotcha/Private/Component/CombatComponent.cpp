@@ -280,7 +280,7 @@ bool UCombatComponent::Parry(AWeapon* DamageCauser)
 
 	if (Character && Character->GetCamera())
 	{
-		FVector Direction = Character->GetCamera()->GetForwardVector();
+		FVector Direction = Character->GetBaseAimRotation().Vector();
 		FVector Start = Character->GetCamera()->GetComponentLocation();
 		FVector End = Start + Direction * TRACE_LENGTH;
 		FCollisionQueryParams QueryParams;
@@ -351,7 +351,7 @@ void UCombatComponent::TraceUnderCrosshairs(FHitResult& TraceHitResult)
 {
 	if (Character && Character->GetCamera())
 	{
-		FVector Direction = Character->GetCamera()->GetForwardVector();
+		FVector Direction = Character->GetBaseAimRotation().Vector();
 		FVector Start = Character->GetCamera()->GetComponentLocation();
 		FVector End = Start + Direction * TRACE_LENGTH;
 		FCollisionQueryParams QueryParams;

@@ -6,6 +6,9 @@
 #include "Game/GotchaGameMode.h"
 #include "TeamGameMode.generated.h"
 
+class AShooterCharacterBase;
+class AShooterPlayerController;
+
 /**
  * 
  */
@@ -18,9 +21,10 @@ public:
 	ATeamGameMode();
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void Logout(AController* Exiting) override;
+	virtual void PlayerEliminated(AShooterCharacterBase* ElimmedCharacter, AShooterPlayerController* VictimController, AShooterPlayerController* AttackerController) override;
 
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Game Settings")
-	int32 TeamMemberLimit = 4;
+	int32 TeamMemberLimit = 3;
 	
 };

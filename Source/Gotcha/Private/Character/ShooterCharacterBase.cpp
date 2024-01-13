@@ -17,6 +17,7 @@
 #include "CableComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "MotionWarpingComponent.h"
+#include "Interface/InteractableInterface.h"
 
 AShooterCharacterBase::AShooterCharacterBase()
 {
@@ -578,6 +579,36 @@ void AShooterCharacterBase::GrappleFinished()
 	bCanGrapple = true;
 }
 
+void AShooterCharacterBase::Interact()
+{
+	ServerInteract();
+}
+
+void AShooterCharacterBase::ServerInteract_Implementation()
+{
+	FVector Direction = GetBaseAimRotation().Vector();
+	FVector Start = Camera->GetComponentLocation();
+	FVector End = Start + Direction * InteractLength;
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+	
+	FHitResult InteractResult;
+	GetWorld()->LineTraceSingleByChannel(
+			InteractResult,
+			Start,
+			End,
+			ECC_StaticMesh,
+			QueryParams
+		);
+
+	IInteractableInterface* Interactable = Cast<IInteractableInterface>(InteractResult.GetActor());
+	if (Interactable)
+	{
+		ShooterPlayerController = ShooterPlayerController == nullptr ? Cast<AShooterPlayerController>(Controller) : ShooterPlayerController;
+		Interactable->OnInteract(ShooterPlayerController);
+	}
+}
+
 void AShooterCharacterBase::PlayFireMontage()
 {
 	if (Combat == nullptr || Combat->EquippedWeapon == nullptr) return;
@@ -602,6 +633,15 @@ void AShooterCharacterBase::PlayFireMontage()
 
 		AnimInstance->Montage_JumpToSection(SectionName);
 	}
+}
+
+void AShooterCharacterBase::HoldFlag()
+{
+	bIsHoldingFlag = true;
+
+	/*
+	 * Attach flag to character and apply animations.
+	 */
 }
 
 void AShooterCharacterBase::ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatorController, AActor* DamageCauser)
