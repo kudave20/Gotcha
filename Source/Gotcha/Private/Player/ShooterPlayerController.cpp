@@ -8,6 +8,7 @@
 #include "Game/GotchaGameMode.h"
 #include "Character/ShooterCharacterBase.h"
 #include "Component/CombatComponent.h"
+#include "Components/Image.h"
 
 AShooterPlayerController::AShooterPlayerController()
 {
@@ -24,6 +25,27 @@ void AShooterPlayerController::BeginPlay()
 void AShooterPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
+
+	PollInit();
+}
+
+void AShooterPlayerController::PollInit()
+{
+	if (CharacterOverlay == nullptr)
+	{
+		if (ShooterHUD && ShooterHUD->CharacterOverlay)
+		{
+			CharacterOverlay = ShooterHUD->CharacterOverlay;
+			if (CharacterOverlay)
+			{
+				if (bInitializeHealth) SetHUDHealth(HUDHealth, HUDMaxHealth);
+				if (bInitializeAmmo) SetHUDAmmo(HUDAmmo);
+				if (bInitializeOwnerTeam) SetHUDOwnerTeam(HUDOwnerTeam);
+				if (bInitializeLeaderTeam) SetHUDLeaderTeam(HUDLeaderTeam);
+				if (bInitializeOwnerRank) SetHUDOwnerRank(HUDOwnerRank);
+			}
+		}
+	}
 }
 
 void AShooterPlayerController::SetHUDHealth(float Health, float MaxHealth)
@@ -39,8 +61,92 @@ void AShooterPlayerController::SetHUDHealth(float Health, float MaxHealth)
 	}
 	else
 	{
+		bInitializeHealth = true;
 		HUDHealth = Health;
 		HUDMaxHealth = MaxHealth;
+	}
+}
+
+void AShooterPlayerController::SetHUDAmmo(int32 Ammo)
+{
+	ShooterHUD = ShooterHUD == nullptr ? Cast<AShooterHUD>(GetHUD()) : ShooterHUD;
+	bool bHUDValid = ShooterHUD &&
+		ShooterHUD->CharacterOverlay &&
+		ShooterHUD->CharacterOverlay->AmmoText;
+	if (bHUDValid)
+	{
+		FString AmmoText = FString::Printf(TEXT("%d"), Ammo);
+		ShooterHUD->CharacterOverlay->AmmoText->SetText(FText::FromString(AmmoText));
+	}
+	else
+	{
+		bInitializeAmmo = true;
+		HUDAmmo = Ammo;
+	}
+}
+
+void AShooterPlayerController::SetHUDOwnerTeam(ETeam OwnerTeam)
+{
+	ShooterHUD = ShooterHUD == nullptr ? Cast<AShooterHUD>(GetHUD()) : ShooterHUD;
+	bool bHUDValid = ShooterHUD &&
+		ShooterHUD->CharacterOverlay &&
+		ShooterHUD->CharacterOverlay->OwnerTeamColor;
+	if (bHUDValid)
+	{
+		ShooterHUD->CharacterOverlay->OwnerTeamColor->SetBrushTintColor(TeamColors[OwnerTeam]);
+	}
+	else
+	{
+		bInitializeOwnerTeam = true;
+		HUDOwnerTeam = OwnerTeam;
+	}
+}
+
+void AShooterPlayerController::SetHUDLeaderTeam(ETeam LeaderTeam)
+{
+	ShooterHUD = ShooterHUD == nullptr ? Cast<AShooterHUD>(GetHUD()) : ShooterHUD;
+	bool bHUDValid = ShooterHUD &&
+		ShooterHUD->CharacterOverlay &&
+		ShooterHUD->CharacterOverlay->LeaderTeamColor;
+	if (bHUDValid)
+	{
+		ShooterHUD->CharacterOverlay->LeaderTeamColor->SetBrushTintColor(TeamColors[LeaderTeam]);
+	}
+	else
+	{
+		bInitializeLeaderTeam = true;
+		HUDLeaderTeam = LeaderTeam;
+	}
+}
+
+void AShooterPlayerController::SetHUDOwnerRank(int32 OwnerRank)
+{
+	ShooterHUD = ShooterHUD == nullptr ? Cast<AShooterHUD>(GetHUD()) : ShooterHUD;
+	bool bHUDValid = ShooterHUD &&
+		ShooterHUD->CharacterOverlay &&
+		ShooterHUD->CharacterOverlay->OwnerRankText;
+	if (bHUDValid)
+	{
+		switch (OwnerRank)
+		{
+		case 1:
+			ShooterHUD->CharacterOverlay->OwnerRankText->SetText(FText::FromString("1st"));
+			break;
+		case 2:
+			ShooterHUD->CharacterOverlay->OwnerRankText->SetText(FText::FromString("2nd"));
+			break;
+		case 3:
+			ShooterHUD->CharacterOverlay->OwnerRankText->SetText(FText::FromString("3rd"));
+			break;
+		case 4:
+			ShooterHUD->CharacterOverlay->OwnerRankText->SetText(FText::FromString("4th"));
+			break;
+		}
+	}
+	else
+	{
+		bInitializeOwnerRank = true;
+		HUDOwnerRank = OwnerRank;
 	}
 }
 

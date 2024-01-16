@@ -24,25 +24,15 @@ void ATeamGameMode::PostLogin(APlayerController* NewPlayer)
 			int32 MinNumber = TeamMemberLimit;
 			ETeam TeamToJoin = ETeam::ET_NoTeam;
 
-			if (!GGameState->Teams.Contains(ETeam::ET_RedTeam))
+			if (!GGameState->Teams.Contains(ETeam::ET_YellowTeam))
 			{
 				MinNumber = 0;
-				TeamToJoin = ETeam::ET_RedTeam;
+				TeamToJoin = ETeam::ET_YellowTeam;
 			}
-			else if (GGameState->Teams[ETeam::ET_RedTeam].Num() < MinNumber)
+			else if (GGameState->Teams[ETeam::ET_YellowTeam].Num() < MinNumber)
 			{
-				MinNumber = GGameState->Teams[ETeam::ET_RedTeam].Num();
-				TeamToJoin = ETeam::ET_RedTeam;
-			}
-			if (!GGameState->Teams.Contains(ETeam::ET_BlueTeam))
-			{
-				MinNumber = 0;
-				TeamToJoin = ETeam::ET_BlueTeam;
-			}
-			else if (GGameState->Teams[ETeam::ET_BlueTeam].Num() < MinNumber)
-			{
-				MinNumber = GGameState->Teams[ETeam::ET_BlueTeam].Num();
-				TeamToJoin = ETeam::ET_BlueTeam;
+				MinNumber = GGameState->Teams[ETeam::ET_YellowTeam].Num();
+				TeamToJoin = ETeam::ET_YellowTeam;
 			}
 			if (!GGameState->Teams.Contains(ETeam::ET_GreenTeam))
 			{
@@ -54,15 +44,25 @@ void ATeamGameMode::PostLogin(APlayerController* NewPlayer)
 				MinNumber = GGameState->Teams[ETeam::ET_GreenTeam].Num();
 				TeamToJoin = ETeam::ET_GreenTeam;
 			}
-			if (!GGameState->Teams.Contains(ETeam::ET_YellowTeam))
+			if (!GGameState->Teams.Contains(ETeam::ET_BlueTeam))
+			{
+				MinNumber = 0;
+				TeamToJoin = ETeam::ET_BlueTeam;
+			}
+			else if (GGameState->Teams[ETeam::ET_BlueTeam].Num() < MinNumber)
+			{
+				MinNumber = GGameState->Teams[ETeam::ET_BlueTeam].Num();
+				TeamToJoin = ETeam::ET_BlueTeam;
+			}
+			if (!GGameState->Teams.Contains(ETeam::ET_RedTeam))
 			{
 				// MinNumber = 0;
-				TeamToJoin = ETeam::ET_YellowTeam;
+				TeamToJoin = ETeam::ET_RedTeam;
 			}
-			else if (GGameState->Teams[ETeam::ET_YellowTeam].Num() < MinNumber)
+			else if (GGameState->Teams[ETeam::ET_RedTeam].Num() < MinNumber)
 			{
-				// MinNumber = GGameState->Teams[ETeam::ET_YellowTeam].Num();
-				TeamToJoin = ETeam::ET_YellowTeam;
+				// MinNumber = GGameState->Teams[ETeam::ET_RedTeam].Num();
+				TeamToJoin = ETeam::ET_RedTeam;
 			}
 
 			if (TeamToJoin == ETeam::ET_NoTeam)
@@ -74,7 +74,9 @@ void ATeamGameMode::PostLogin(APlayerController* NewPlayer)
 			else
 			{
 				GGameState->Teams[TeamToJoin].AddUnique(SPState);
+				GGameState->TeamsAtRank[GGameState->TeamRanks[TeamToJoin]].AddUnique(TeamToJoin);
 				SPState->SetTeam(TeamToJoin);
+				SPState->SetTeamRank(GGameState->TeamRanks[TeamToJoin]);
 			}
 		}
 	}
@@ -98,6 +100,6 @@ void ATeamGameMode::PlayerEliminated(AShooterCharacterBase* ElimmedCharacter, AS
 	AShooterPlayerState* AttackerPlayerState = AttackerController ? Cast<AShooterPlayerState>(AttackerController->PlayerState) : nullptr;
 	if (GGameState && AttackerPlayerState)
 	{
-		GGameState->ScoreTeam(AttackerPlayerState->GetTeam());
+		GGameState->ScoreTeam(AttackerPlayerState->GetTeam(), NumberOfTeams);
 	}
 }

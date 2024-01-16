@@ -30,6 +30,7 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void PostInitializeComponents() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void OnRep_PlayerState() override;
 	
 	void Elim(bool bPlayerLeftGame);
 	UFUNCTION(NetMulticast, Reliable)
@@ -47,8 +48,6 @@ protected:
 
 	UFUNCTION()
 	void ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatorController, AActor* DamageCauser);
-	
-	void PollInit();
 
 	void DestroyWeapons();
 
@@ -174,6 +173,10 @@ private:
 	AShooterPlayerController* ShooterPlayerController;
 
 	void UpdateHUDHealth();
+	void UpdateHUDAmmo();
+	void UpdateHUDOwnerTeam();
+	void UpdateHUDLeaderTeam();
+	void UpdateHUDOwnerRank();
 
 	bool bElimmed;
 

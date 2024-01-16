@@ -17,7 +17,10 @@
 #include "CableComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "MotionWarpingComponent.h"
+#include "Game/GotchaGameState.h"
 #include "Interface/InteractableInterface.h"
+#include "Kismet/GameplayStatics.h"
+#include "Player/ShooterPlayerState.h"
 
 AShooterCharacterBase::AShooterCharacterBase()
 {
@@ -90,8 +93,6 @@ void AShooterCharacterBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	PollInit();
-
 	if (HasAuthority())
 	{
 		CheckGrapple();
@@ -144,16 +145,15 @@ void AShooterCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	DOREPLIFETIME(AShooterCharacterBase, bIsMantling);
 }
 
-void AShooterCharacterBase::PollInit()
+void AShooterCharacterBase::OnRep_PlayerState()
 {
-	if (ShooterPlayerController == nullptr)
-	{
-		ShooterPlayerController = ShooterPlayerController == nullptr ? Cast<AShooterPlayerController>(Controller) : ShooterPlayerController;
-		if (ShooterPlayerController)
-		{
-			UpdateHUDHealth();
-		}
-	}
+	Super::OnRep_PlayerState();
+
+	UpdateHUDHealth();
+	UpdateHUDAmmo();
+	UpdateHUDOwnerTeam();
+	UpdateHUDLeaderTeam();
+	UpdateHUDOwnerRank();
 }
 
 void AShooterCharacterBase::CheckGrapple()
@@ -723,7 +723,7 @@ void AShooterCharacterBase::DestroyWeapons()
 
 void AShooterCharacterBase::EquipWeapon()
 {
-	if (Combat == nullptr) return;
+	if (Combat == nullptr || !HasAuthority()) return;
 	
 	if (PrimaryGunClass && SecondaryGunClass)
 	{
@@ -758,6 +758,54 @@ void AShooterCharacterBase::UpdateHUDHealth()
 	if (ShooterPlayerController)
 	{
 		ShooterPlayerController->SetHUDHealth(Health, MaxHealth);
+	}
+}
+
+void AShooterCharacterBase::UpdateHUDAmmo()
+{
+	ShooterPlayerController = ShooterPlayerController == nullptr ? Cast<AShooterPlayerController>(Controller) : ShooterPlayerController;
+	if (ShooterPlayerController && Combat && Combat->EquippedWeapon)
+	{
+		ShooterPlayerController->SetHUDAmmo(Combat->EquippedWeapon->GetAmmo());
+	}
+}
+
+void AShooterCharacterBase::UpdateHUDOwnerTeam()
+{
+	ShooterPlayerController = ShooterPlayerController == nullptr ? Cast<AShooterPlayerController>(Controller) : ShooterPlayerController;
+	if (ShooterPlayerController)
+	{
+		AShooterPlayerState* SPState = GetPlayerState<AShooterPlayerState>();
+		if (SPState)
+		{
+			ShooterPlayerController->SetHUDOwnerTeam(SPState->GetTeam());
+		}
+	}
+}
+
+void AShooterCharacterBase::UpdateHUDLeaderTeam()
+{
+	ShooterPlayerController = ShooterPlayerController == nullptr ? Cast<AShooterPlayerController>(Controller) : ShooterPlayerController;
+	if (ShooterPlayerController)
+	{
+		AGotchaGameState* GGameState = Cast<AGotchaGameState>(UGameplayStatics::GetGameState(this));
+		if (GGameState)
+		{
+			ShooterPlayerController->SetHUDLeaderTeam(GGameState->LeaderTeam);
+		}
+	}
+}
+
+void AShooterCharacterBase::UpdateHUDOwnerRank()
+{
+	ShooterPlayerController = ShooterPlayerController == nullptr ? Cast<AShooterPlayerController>(Controller) : ShooterPlayerController;
+	if (ShooterPlayerController)
+	{
+		AShooterPlayerState* SPState = GetPlayerState<AShooterPlayerState>();
+		if (SPState)
+		{
+			ShooterPlayerController->SetHUDOwnerRank(SPState->GetTeamRank());
+		}
 	}
 }
 

@@ -23,6 +23,10 @@ public:
 	virtual void Logout(AController* Exiting) override;
 	virtual void PlayerEliminated(AShooterCharacterBase* ElimmedCharacter, AShooterPlayerController* VictimController, AShooterPlayerController* AttackerController) override;
 
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Game Settings")
+	int32 NumberOfTeams = 4;
+	
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Game Settings")
 	int32 TeamMemberLimit = 3;

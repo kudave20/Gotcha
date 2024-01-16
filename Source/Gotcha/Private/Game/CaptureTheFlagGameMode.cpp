@@ -13,8 +13,8 @@ void ACaptureTheFlagGameMode::PlayerEliminated(AShooterCharacterBase* ElimmedCha
 void ACaptureTheFlagGameMode::FlagCaptured(AShooterPlayerState* ScoringPlayer)
 {
 	AGotchaGameState* GGameState = Cast<AGotchaGameState>(GameState);
-	if (GGameState)
+	if (GGameState && ScoringPlayer)
 	{
-		GGameState->ScoreTeam(ScoringPlayer->GetTeam());
+		GGameState->ScoreTeam(ScoringPlayer->GetTeam(), NumberOfTeams);
 	}
 }
