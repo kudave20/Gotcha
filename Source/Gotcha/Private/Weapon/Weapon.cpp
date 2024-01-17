@@ -2,6 +2,7 @@
 
 
 #include "Weapon/Weapon.h"
+#include "Character/ShooterCharacterBase.h"
 #include "Net/UnrealNetwork.h"
 
 AWeapon::AWeapon()
@@ -51,12 +52,30 @@ void AWeapon::Fire(const FVector& HitTarget)
 
 void AWeapon::SpendRound()
 {
-	Ammo = FMath::Clamp(Ammo - 1, 0, Ammo - 1);
+	Ammo = FMath::Clamp(Ammo - 1, 0, MagCapacity);
+	if (!HasAuthority())
+	{
+		SetHUDAmmo();
+	}
 }
 
 void AWeapon::Reload()
 {
 	Ammo = MagCapacity;
+}
+
+void AWeapon::OnRep_Ammo()
+{
+	SetHUDAmmo();
+}
+
+void AWeapon::SetHUDAmmo()
+{
+	OwnerCharacter = OwnerCharacter == nullptr ? Cast<AShooterCharacterBase>(GetOwner()) : OwnerCharacter;
+	if (OwnerCharacter && OwnerCharacter->IsLocallyControlled())
+	{
+		OwnerCharacter->UpdateHUDAmmo();
+	}
 }
 
 bool AWeapon::IsEmpty()

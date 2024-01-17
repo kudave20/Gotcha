@@ -35,7 +35,7 @@ public:
 	TObjectPtr<UTextBlock> MaxAmmoText;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> TimerText;
+	TObjectPtr<UTextBlock> MatchTimeText;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> OwnerRankText;

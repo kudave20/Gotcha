@@ -89,8 +89,11 @@ private:
 	UPROPERTY()
 	AShooterHUD* HUD;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing = OnRep_EquippedWeapon)
 	AWeapon* EquippedWeapon;
+
+	UFUNCTION()
+	void OnRep_EquippedWeapon();
 
 	UPROPERTY(Replicated)
 	AWeapon* SecondaryWeapon;

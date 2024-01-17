@@ -31,6 +31,8 @@ public:
 	virtual void PostInitializeComponents() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnRep_PlayerState() override;
+
+	void EquipWeapon();
 	
 	void Elim(bool bPlayerLeftGame);
 	UFUNCTION(NetMulticast, Reliable)
@@ -42,7 +44,13 @@ public:
 	bool bDisableGameplay;
 
 	void HoldFlag();
-
+	
+	void UpdateHUDHealth();
+	void UpdateHUDAmmo();
+	void UpdateHUDOwnerTeam();
+	void UpdateHUDLeaderTeam();
+	void UpdateHUDOwnerRank();
+	
 protected:
 	virtual void BeginPlay() override;
 
@@ -121,8 +129,6 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	TSubclassOf<AWeapon> SecondaryGunClass;
 
-	void EquipWeapon();
-
 	UFUNCTION(Server, Reliable)
 	void ServerLaunchCharacter(const FVector_NetQuantize& LaunchForce);
 
@@ -171,12 +177,6 @@ private:
 
 	UPROPERTY()
 	AShooterPlayerController* ShooterPlayerController;
-
-	void UpdateHUDHealth();
-	void UpdateHUDAmmo();
-	void UpdateHUDOwnerTeam();
-	void UpdateHUDLeaderTeam();
-	void UpdateHUDOwnerRank();
 
 	bool bElimmed;
 

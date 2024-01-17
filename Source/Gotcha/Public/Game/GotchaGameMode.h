@@ -34,14 +34,17 @@ public:
 	float EndingTime = 10.f;
 
 	float LevelStartingTime = 0.f;
+	
+	bool bTeamsMatch = false;
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnMatchStateSet() override;
 	
-	bool bTeamsMatch = false;
-	
 private:
 	float CountdownTime = 0.f;
+
+public:
+	FORCEINLINE float GetCountdownTime() const { return CountdownTime; }
 	
 };

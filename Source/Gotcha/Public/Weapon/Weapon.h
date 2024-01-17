@@ -11,6 +11,7 @@
 
 class UTexture2D;
 class UAnimationAsset;
+class AShooterCharacterBase;
 
 UCLASS()
 class GOTCHA_API AWeapon : public AActor
@@ -64,6 +65,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	float Damage = 10.f;
 
+	UPROPERTY()
+	AShooterCharacterBase* OwnerCharacter;
+
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
@@ -73,14 +77,19 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	TObjectPtr<UAnimationAsset> FireAnimation;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing = OnRep_Ammo)
 	int32 Ammo;
+
+	UFUNCTION()
+	void OnRep_Ammo();
 
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	int32 MagCapacity;
 
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	EWeaponType WeaponType;
+	
+	void SetHUDAmmo();
 	
 public:	
 	FORCEINLINE USkeletalMeshComponent* GetWeaponMesh() const { return WeaponMesh; }

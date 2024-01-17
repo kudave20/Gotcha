@@ -149,11 +149,13 @@ void AShooterCharacterBase::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 
-	UpdateHUDHealth();
-	UpdateHUDAmmo();
-	UpdateHUDOwnerTeam();
-	UpdateHUDLeaderTeam();
-	UpdateHUDOwnerRank();
+	if (IsLocallyControlled())
+	{
+		UpdateHUDHealth();
+		UpdateHUDOwnerTeam();
+		UpdateHUDLeaderTeam();
+		UpdateHUDOwnerRank();
+	}
 }
 
 void AShooterCharacterBase::CheckGrapple()

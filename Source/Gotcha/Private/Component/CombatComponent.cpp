@@ -453,6 +453,14 @@ void UCombatComponent::SlashFinished()
 	}
 }
 
+void UCombatComponent::OnRep_EquippedWeapon()
+{
+	if (Character)
+	{
+		Character->UpdateHUDAmmo();
+	}
+}
+
 bool UCombatComponent::CanFire()
 {
 	if (EquippedWeapon == nullptr) return false;

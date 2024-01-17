@@ -52,7 +52,7 @@ void AGotchaGameMode::OnMatchStateSet()
 		AShooterPlayerController* ShooterPlayer = Cast<AShooterPlayerController>(*It);
 		if (ShooterPlayer)
 		{
-			ShooterPlayer->OnMatchStateSet(MatchState, bTeamsMatch);
+			ShooterPlayer->OnMatchStateSet(MatchState);
 		}
 	}
 }
