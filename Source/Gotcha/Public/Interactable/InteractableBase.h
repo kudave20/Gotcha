@@ -16,8 +16,10 @@ public:
 	AInteractableBase();
 
 protected:
-	virtual void BeginPlay() override;
-
 	virtual void OnInteract(APlayerController* Player) override;
+
+private:
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<UStaticMeshComponent> Mesh;
 
 };

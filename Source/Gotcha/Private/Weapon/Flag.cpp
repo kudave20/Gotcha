@@ -7,8 +7,15 @@
 
 AFlag::AFlag()
 {
+	FlagMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FlagMesh"));
+	SetRootComponent(FlagMesh);
+	FlagMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+	FlagMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	WeaponMesh->SetupAttachment(FlagMesh);
+	
 	PickupArea = CreateDefaultSubobject<USphereComponent>(TEXT("PickupArea"));
-	PickupArea->SetupAttachment(GetRootComponent());
+	PickupArea->SetupAttachment(FlagMesh);
 	PickupArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	PickupArea->SetCollisionObjectType(ECC_WorldDynamic);
 	PickupArea->SetCollisionResponseToAllChannels(ECR_Ignore);
@@ -32,6 +39,6 @@ void AFlag::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Ot
 	AShooterCharacterBase* ShooterCharacter = Cast<AShooterCharacterBase>(OtherActor);
 	if (ShooterCharacter)
 	{
-		ShooterCharacter->HoldFlag();
+		ShooterCharacter->HoldFlag(this);
 	}
 }

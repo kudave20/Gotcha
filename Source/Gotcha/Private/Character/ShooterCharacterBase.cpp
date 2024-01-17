@@ -21,6 +21,7 @@
 #include "Interface/InteractableInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/ShooterPlayerState.h"
+#include "Weapon/Flag.h"
 
 AShooterCharacterBase::AShooterCharacterBase()
 {
@@ -121,6 +122,7 @@ void AShooterCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	EnhancedInputComponent->BindAction(SwapAction, ETriggerEvent::Started, this, &AShooterCharacterBase::SwapWeapons);
 	EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Parry);
 	EnhancedInputComponent->BindAction(GrappleAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Grapple);
+	EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Interact);
 }
 
 void AShooterCharacterBase::PostInitializeComponents()
@@ -637,15 +639,6 @@ void AShooterCharacterBase::PlayFireMontage()
 	}
 }
 
-void AShooterCharacterBase::HoldFlag()
-{
-	bIsHoldingFlag = true;
-
-	/*
-	 * Attach flag to character and apply animations.
-	 */
-}
-
 void AShooterCharacterBase::ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatorController, AActor* DamageCauser)
 {
 	GotchaGameMode = GotchaGameMode == nullptr ? GetWorld()->GetAuthGameMode<AGotchaGameMode>() : GotchaGameMode;
@@ -738,6 +731,18 @@ void AShooterCharacterBase::EquipWeapon()
 	}
 }
 
+void AShooterCharacterBase::HoldFlag(AFlag* Flag)
+{
+	if (Flag == nullptr || Combat == nullptr) return;
+
+	Combat->bHoldingFlag = true;
+	Flag->SetOwner(this);
+
+	/*
+	 * Play animations and do somethings for holding the flag.
+	 */
+}
+
 void AShooterCharacterBase::SetCollisionBetweenCharacter(const ECollisionResponse NewResponse)
 {
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, NewResponse);
@@ -815,4 +820,16 @@ AWeapon* AShooterCharacterBase::GetEquippedWeapon()
 {
 	if (Combat == nullptr) return nullptr;
 	return Combat->EquippedWeapon;
+}
+
+bool AShooterCharacterBase::IsHoldingFlag() const
+{
+	if (Combat == nullptr) return false;
+	return Combat->bHoldingFlag;
+}
+
+void AShooterCharacterBase::SetHoldingFlag(bool bHolding)
+{
+	if (Combat == nullptr) return;
+	Combat->bHoldingFlag = bHolding;
 }

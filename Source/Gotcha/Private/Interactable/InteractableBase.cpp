@@ -7,12 +7,8 @@ AInteractableBase::AInteractableBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-}
-
-void AInteractableBase::BeginPlay()
-{
-	Super::BeginPlay();
-	
+	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
+	SetRootComponent(Mesh);
 }
 
 void AInteractableBase::OnInteract(APlayerController* Player)

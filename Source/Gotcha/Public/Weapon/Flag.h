@@ -33,6 +33,9 @@ protected:
 	
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<UStaticMeshComponent> FlagMesh;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<USphereComponent> PickupArea;
 	
 };

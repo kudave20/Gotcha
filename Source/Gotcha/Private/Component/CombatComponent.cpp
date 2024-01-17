@@ -45,6 +45,7 @@ void UCombatComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 
 	DOREPLIFETIME(UCombatComponent, EquippedWeapon);
 	DOREPLIFETIME(UCombatComponent, SecondaryWeapon);
+	DOREPLIFETIME(UCombatComponent, bHoldingFlag);
 }
 
 void UCombatComponent::FireButtonPressed(bool bPressed)

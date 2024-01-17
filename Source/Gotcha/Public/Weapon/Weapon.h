@@ -55,6 +55,9 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
 
 	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
 	float DistanceToSphere = 800.f;
@@ -69,9 +72,6 @@ protected:
 	AShooterCharacterBase* OwnerCharacter;
 
 private:
-	UPROPERTY(VisibleAnywhere, Category = "Components")
-	TObjectPtr<USkeletalMeshComponent> WeaponMesh;
-	
 	void SpendRound();
 
 	UPROPERTY(EditAnywhere, Category = "Animation")

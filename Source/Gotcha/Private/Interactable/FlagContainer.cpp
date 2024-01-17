@@ -2,16 +2,23 @@
 
 
 #include "Interactable/FlagContainer.h"
+#include "Character/ShooterCharacterBase.h"
 #include "Game/CaptureTheFlagGameMode.h"
 #include "Player/ShooterPlayerState.h"
 
 void AFlagContainer::OnInteract(APlayerController* Player)
-{
+{	
 	Super::OnInteract(Player);
 
-	ACaptureTheFlagGameMode* GameMode = GetWorld()->GetAuthGameMode<ACaptureTheFlagGameMode>();
-	if (GameMode && Player)
+	if (Player == nullptr) return;
+
+	AShooterCharacterBase* ShooterCharacter = Cast<AShooterCharacterBase>(Player->GetPawn());
+	if (ShooterCharacter && ShooterCharacter->IsHoldingFlag())
 	{
-		GameMode->FlagCaptured(Player->GetPlayerState<AShooterPlayerState>());
+		ACaptureTheFlagGameMode* GameMode = GetWorld()->GetAuthGameMode<ACaptureTheFlagGameMode>();
+		if (GameMode)
+		{
+			GameMode->FlagCaptured(Player->GetPlayerState<AShooterPlayerState>());
+		}
 	}
 }

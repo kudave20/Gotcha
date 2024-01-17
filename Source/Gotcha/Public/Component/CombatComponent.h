@@ -121,6 +121,9 @@ private:
 	FTimerHandle ParryTimer;
 
 	void ParryTimerFinished();
+
+	UPROPERTY(Replicated)
+	bool bHoldingFlag = false;
 	
 public:
 	

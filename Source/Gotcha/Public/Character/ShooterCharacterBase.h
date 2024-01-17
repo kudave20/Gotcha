@@ -18,6 +18,7 @@ class UAnimMontage;
 class USphereComponent;
 class UCableComponent;
 class UMotionWarpingComponent;
+class AFlag;
 
 UCLASS()
 class GOTCHA_API AShooterCharacterBase : public ACharacter
@@ -33,6 +34,7 @@ public:
 	virtual void OnRep_PlayerState() override;
 
 	void EquipWeapon();
+	void HoldFlag(AFlag* Flag);
 	
 	void Elim(bool bPlayerLeftGame);
 	UFUNCTION(NetMulticast, Reliable)
@@ -42,8 +44,6 @@ public:
 
 	UPROPERTY(Replicated)
 	bool bDisableGameplay;
-
-	void HoldFlag();
 	
 	void UpdateHUDHealth();
 	void UpdateHUDAmmo();
@@ -107,6 +107,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = Input)
 	TObjectPtr<UInputAction> GrappleAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	TObjectPtr<UInputAction> InteractAction;
 
 	void Move(const FInputActionValue& InputActionValue);
 	void MoveButtonReleased();
@@ -249,8 +252,6 @@ private:
 
 	void MantleFinished();
 
-	bool bIsHoldingFlag;
-
 	UFUNCTION(Server, Reliable)
 	void ServerInteract();
 
@@ -263,5 +264,7 @@ public:
 	FORCEINLINE float GetParryTime() const { return ParryTime; }
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 	FORCEINLINE TObjectPtr<UCombatComponent> GetCombat() const { return Combat; }
+	bool IsHoldingFlag() const;
+	void SetHoldingFlag(bool bHolding);
 	
 };
