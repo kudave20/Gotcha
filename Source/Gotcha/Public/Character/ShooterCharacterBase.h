@@ -44,6 +44,9 @@ public:
 	void PlayFireMontage();
 
 	bool bDisableGameplay;
+
+	UFUNCTION(Client, Reliable)
+	void ClientResetForTeamRespawn();
 	
 	void UpdateHUDHealth();
 	void UpdateHUDAmmo();
@@ -265,7 +268,7 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void ServerRespawn();
-
+	
 	bool bCanRespawn = false;
 
 	UFUNCTION(NetMulticast, Reliable)

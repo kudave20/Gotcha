@@ -30,5 +30,8 @@ protected:
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Game Settings")
 	int32 TeamMemberLimit = 3;
+
+	UPROPERTY(EditAnywhere, Category = "Game Settings")
+	float TeamRespawnTime = 15.f;
 	
 };

@@ -2,9 +2,7 @@
 
 
 #include "Game/TeamGameMode.h"
-#include "Character/ShooterCharacterBase.h"
 #include "Game/GotchaGameState.h"
-#include "GameFramework/CharacterMovementComponent.h"
 #include "Player/ShooterPlayerState.h"
 #include "Player/ShooterPlayerController.h"
 
@@ -100,8 +98,16 @@ void ATeamGameMode::PlayerEliminated(AShooterCharacterBase* ElimmedCharacter, AS
 
 	AGotchaGameState* GGameState = Cast<AGotchaGameState>(GameState);
 	AShooterPlayerState* AttackerPlayerState = AttackerController ? Cast<AShooterPlayerState>(AttackerController->PlayerState) : nullptr;
-	if (GGameState && AttackerPlayerState)
+	AShooterPlayerState* VictimPlayerState = VictimController ? Cast<AShooterPlayerState>(VictimController->PlayerState) : nullptr;
+	if (GGameState)
 	{
-		GGameState->ScoreTeam(AttackerPlayerState->GetTeam(), NumberOfTeams);
+		if (AttackerPlayerState)
+		{
+			GGameState->ScoreTeam(AttackerPlayerState->GetTeam(), NumberOfTeams);
+		}
+		if (VictimPlayerState)
+		{
+			GGameState->CountTeamElim(VictimPlayerState->GetTeam(), TeamRespawnTime);
+		}
 	}
 }

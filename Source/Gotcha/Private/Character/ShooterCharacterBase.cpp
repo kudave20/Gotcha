@@ -325,7 +325,7 @@ void AShooterCharacterBase::MulticastDoMantle_Implementation(const FVector_NetQu
 			this,
 			&AShooterCharacterBase::MantleFinished,
 			MantleMontageLength
-		);
+			);
 	}
 }
 
@@ -800,6 +800,12 @@ void AShooterCharacterBase::ServerSetCollisionBetweenCharacter_Implementation(co
 void AShooterCharacterBase::OnRep_Health()
 {
 	UpdateHUDHealth();
+}
+
+void AShooterCharacterBase::ClientResetForTeamRespawn_Implementation()
+{
+	GetWorldTimerManager().ClearTimer(ElimTimer);
+	bCanRespawn = false;
 }
 
 void AShooterCharacterBase::UpdateHUDHealth()

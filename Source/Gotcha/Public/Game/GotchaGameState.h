@@ -39,10 +39,17 @@ public:
 
 	void RemoveFromTeam(AShooterPlayerState* PlayerToRemove);
 
+	void CountTeamElim(ETeam Team, float TeamRespawnTime);
+
+	TMap<ETeam, int32> TeamElimCounts;
+
 private:
 	float TopScore = 0.f;
 
 	UFUNCTION()
 	void OnRep_LeaderTeam();
+
+	UFUNCTION()
+	void RespawnTeam(ETeam TeamToRespawn);
 	
 };

@@ -2,6 +2,9 @@
 
 
 #include "Game/GotchaGameState.h"
+#include "Character/ShooterCharacterBase.h"
+#include "Game/GotchaGameMode.h"
+#include "GameFramework/Character.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/ShooterPlayerState.h"
 #include "Player/ShooterPlayerController.h"
@@ -27,6 +30,11 @@ AGotchaGameState::AGotchaGameState()
 	TeamsAtRank.Add(2, TArray<ETeam>());
 	TeamsAtRank.Add(3, TArray<ETeam>());
 	TeamsAtRank.Add(4, TArray<ETeam>());
+
+	TeamElimCounts.Add(ETeam::ET_RedTeam, 0);
+	TeamElimCounts.Add(ETeam::ET_BlueTeam, 0);
+	TeamElimCounts.Add(ETeam::ET_GreenTeam, 0);
+	TeamElimCounts.Add(ETeam::ET_YellowTeam, 0);
 }
 
 void AGotchaGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -112,6 +120,48 @@ void AGotchaGameState::RemoveFromTeam(AShooterPlayerState* PlayerToRemove)
 	if (Teams[PlayerToRemove->GetTeam()].Contains(PlayerToRemove))
 	{
 		Teams[PlayerToRemove->GetTeam()].Remove(PlayerToRemove);
+	}
+}
+
+void AGotchaGameState::CountTeamElim(ETeam Team, float TeamRespawnTime)
+{
+	TeamElimCounts[Team] = FMath::Clamp(TeamElimCounts[Team] + 1, 0, Teams[Team].Num());
+	if (TeamElimCounts[Team] >= Teams[Team].Num())
+	{
+		for (auto Member : Teams[Team])
+		{
+			AShooterCharacterBase* ShooterCharacter = Cast<AShooterCharacterBase>(Member->GetPawn());
+			if (ShooterCharacter)
+			{
+				ShooterCharacter->ClientResetForTeamRespawn();
+			}
+		}
+		
+		FTimerHandle TeamRespawnTimer;
+		FTimerDelegate TeamRespawnDelegate = FTimerDelegate::CreateUObject(this, &AGotchaGameState::RespawnTeam, Team);
+		GetWorldTimerManager().SetTimer(
+			TeamRespawnTimer,
+			TeamRespawnDelegate,
+			TeamRespawnTime,
+			false
+			);
+	}
+}
+
+void AGotchaGameState::RespawnTeam(ETeam TeamToRespawn)
+{
+	AGotchaGameMode* GotchaGameMode = GetWorld()->GetAuthGameMode<AGotchaGameMode>();
+	if (GotchaGameMode)
+	{
+		for (auto Member : Teams[TeamToRespawn])
+		{
+			ACharacter* Character = Cast<ACharacter>(Member->GetPawn());
+			if (Character)
+			{
+				GotchaGameMode->RequestRespawn(Character, Character->Controller);
+			}
+		}
+		TeamElimCounts[TeamToRespawn] = 0;
 	}
 }
 
