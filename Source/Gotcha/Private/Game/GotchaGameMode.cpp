@@ -71,7 +71,6 @@ void AGotchaGameMode::PlayerEliminated(AShooterCharacterBase* ElimmedCharacter, 
 	{
 		ElimmedCharacter->Elim(false);
 	}
-	
 }
 
 void AGotchaGameMode::RequestRespawn(ACharacter* ElimmedCharacter, AController* ElimmedController)

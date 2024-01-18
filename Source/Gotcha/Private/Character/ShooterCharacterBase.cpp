@@ -18,6 +18,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "MotionWarpingComponent.h"
 #include "Game/GotchaGameState.h"
+#include "Game/TeamGameMode.h"
 #include "Interface/InteractableInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/ShooterPlayerState.h"
@@ -86,7 +87,7 @@ void AShooterCharacterBase::BeginPlay()
 	if (HasAuthority())
 	{
 		OnTakeAnyDamage.AddDynamic(this, &AShooterCharacterBase::ReceiveDamage);
-		EquipWeapon();
+		EquipWeapons();
 	}
 }
 
@@ -123,6 +124,7 @@ void AShooterCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Parry);
 	EnhancedInputComponent->BindAction(GrappleAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Grapple);
 	EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Interact);
+	EnhancedInputComponent->BindAction(RespawnAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Respawn);
 }
 
 void AShooterCharacterBase::PostInitializeComponents()
@@ -140,7 +142,6 @@ void AShooterCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AShooterCharacterBase, Health);
-	DOREPLIFETIME(AShooterCharacterBase, bDisableGameplay);
 	DOREPLIFETIME(AShooterCharacterBase, GrabPoint);
 	DOREPLIFETIME(AShooterCharacterBase, bIsGrappling);
 	DOREPLIFETIME(AShooterCharacterBase, bCanGrapple);
@@ -160,6 +161,30 @@ void AShooterCharacterBase::OnRep_PlayerState()
 	}
 }
 
+void AShooterCharacterBase::OnInteract(APlayerController* Player)
+{
+	if (bElimmed)
+	{
+		GotchaGameMode = GotchaGameMode == nullptr ? GetWorld()->GetAuthGameMode<AGotchaGameMode>() : GotchaGameMode;
+		ATeamGameMode* TeamGameMode = Cast<ATeamGameMode>(GotchaGameMode);
+		if (TeamGameMode)
+		{
+			MulticastRespawnImmediately();
+		}
+	}
+}
+
+void AShooterCharacterBase::MulticastRespawnImmediately_Implementation()
+{	
+	bElimmed = false;
+	bDisableGameplay = false;
+	Health = MaxHealth;
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	EquipWeapons();
+	UpdateHUDHealth();
+}
+
 void AShooterCharacterBase::CheckGrapple()
 {
 	if (!bIsGrappling) return;
@@ -175,7 +200,7 @@ void AShooterCharacterBase::CheckGrapple()
 			GrappleResult,
 			Start,
 			End,
-			ECC_Visibility,
+			ECC_StaticMesh,
 			QueryParams
 		);
 
@@ -585,6 +610,8 @@ void AShooterCharacterBase::GrappleFinished()
 
 void AShooterCharacterBase::Interact()
 {
+	if (bDisableGameplay) return;
+	
 	ServerInteract();
 }
 
@@ -601,7 +628,7 @@ void AShooterCharacterBase::ServerInteract_Implementation()
 			InteractResult,
 			Start,
 			End,
-			ECC_StaticMesh,
+			ECC_Visibility,
 			QueryParams
 		);
 
@@ -610,6 +637,27 @@ void AShooterCharacterBase::ServerInteract_Implementation()
 	{
 		ShooterPlayerController = ShooterPlayerController == nullptr ? Cast<AShooterPlayerController>(Controller) : ShooterPlayerController;
 		Interactable->OnInteract(ShooterPlayerController);
+	}
+	else if (InteractResult.GetActor())
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("%s"), *InteractResult.GetActor()->GetName()));;
+	}
+}
+
+void AShooterCharacterBase::Respawn()
+{
+	if (bCanRespawn)
+	{
+		ServerRespawn();
+	}
+}
+
+void AShooterCharacterBase::ServerRespawn_Implementation()
+{
+	GotchaGameMode = GotchaGameMode == nullptr ? GetWorld()->GetAuthGameMode<AGotchaGameMode>() : GotchaGameMode;
+	if (GotchaGameMode && !bLeftGame)
+	{
+		GotchaGameMode->RequestRespawn(this, Controller);
 	}
 }
 
@@ -682,7 +730,6 @@ void AShooterCharacterBase::MulticastElim_Implementation(bool bPlayerLeftGame)
 	}
 	
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	
 	GetWorldTimerManager().SetTimer(
 		ElimTimer,
@@ -694,11 +741,7 @@ void AShooterCharacterBase::MulticastElim_Implementation(bool bPlayerLeftGame)
 
 void AShooterCharacterBase::ElimTimerFinished()
 {
-	GotchaGameMode = GotchaGameMode == nullptr ? GetWorld()->GetAuthGameMode<AGotchaGameMode>() : GotchaGameMode;
-	if (GotchaGameMode && !bLeftGame)
-	{
-		GotchaGameMode->RequestRespawn(this, Controller);
-	}
+	bCanRespawn = true;
 }
 
 void AShooterCharacterBase::DestroyWeapons()
@@ -716,7 +759,7 @@ void AShooterCharacterBase::DestroyWeapons()
 	}
 }
 
-void AShooterCharacterBase::EquipWeapon()
+void AShooterCharacterBase::EquipWeapons()
 {
 	if (Combat == nullptr || !HasAuthority()) return;
 	

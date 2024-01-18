@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Interface/InteractableInterface.h"
 #include "ShooterCharacterBase.generated.h"
 
 class UInputMappingContext;
@@ -21,7 +22,7 @@ class UMotionWarpingComponent;
 class AFlag;
 
 UCLASS()
-class GOTCHA_API AShooterCharacterBase : public ACharacter
+class GOTCHA_API AShooterCharacterBase : public ACharacter, public IInteractableInterface
 {
 	GENERATED_BODY()
 
@@ -33,7 +34,7 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnRep_PlayerState() override;
 
-	void EquipWeapon();
+	void EquipWeapons();
 	void HoldFlag(AFlag* Flag);
 	
 	void Elim(bool bPlayerLeftGame);
@@ -42,7 +43,6 @@ public:
 	
 	void PlayFireMontage();
 
-	UPROPERTY(Replicated)
 	bool bDisableGameplay;
 	
 	void UpdateHUDHealth();
@@ -53,6 +53,7 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
+	virtual void OnInteract(APlayerController* Player) override;
 
 	UFUNCTION()
 	void ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatorController, AActor* DamageCauser);
@@ -111,6 +112,9 @@ private:
 	UPROPERTY(EditAnywhere, Category = Input)
 	TObjectPtr<UInputAction> InteractAction;
 
+	UPROPERTY(EditAnywhere, Category = Input)
+	TObjectPtr<UInputAction> RespawnAction;
+
 	void Move(const FInputActionValue& InputActionValue);
 	void MoveButtonReleased();
 	void Look(const FInputActionValue& InputActionValue);
@@ -125,6 +129,7 @@ private:
 	void Parry();
 	void Grapple();
 	void Interact();
+	void Respawn();
 
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	TSubclassOf<AWeapon> PrimaryGunClass;
@@ -180,8 +185,8 @@ private:
 
 	UPROPERTY()
 	AShooterPlayerController* ShooterPlayerController;
-
-	bool bElimmed;
+	
+	bool bElimmed = false;
 
 	FTimerHandle ElimTimer;
 
@@ -190,7 +195,7 @@ private:
 
 	void ElimTimerFinished();
 
-	bool bLeftGame;
+	bool bLeftGame = false;
 
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	TObjectPtr<UAnimMontage> FireWeaponMontage;
@@ -257,6 +262,14 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	float InteractLength = 600.f;
+
+	UFUNCTION(Server, Reliable)
+	void ServerRespawn();
+
+	bool bCanRespawn = false;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRespawnImmediately();
 	
 public:	
 	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }

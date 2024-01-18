@@ -22,7 +22,7 @@ public:
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void Logout(AController* Exiting) override;
 	virtual void PlayerEliminated(AShooterCharacterBase* ElimmedCharacter, AShooterPlayerController* VictimController, AShooterPlayerController* AttackerController) override;
-
+	
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Game Settings")
 	int32 NumberOfTeams = 4;

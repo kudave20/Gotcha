@@ -2,7 +2,9 @@
 
 
 #include "Game/TeamGameMode.h"
+#include "Character/ShooterCharacterBase.h"
 #include "Game/GotchaGameState.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Player/ShooterPlayerState.h"
 #include "Player/ShooterPlayerController.h"
 
