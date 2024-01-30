@@ -29,9 +29,9 @@ void ATeamGameMode::PostLogin(APlayerController* NewPlayer)
 				MinNumber = 0;
 				TeamToJoin = ETeam::ET_YellowTeam;
 			}
-			else if (GGameState->Teams[ETeam::ET_YellowTeam].Num() < MinNumber)
+			else if (GGameState->Teams[ETeam::ET_YellowTeam].Members.Num() < MinNumber)
 			{
-				MinNumber = GGameState->Teams[ETeam::ET_YellowTeam].Num();
+				MinNumber = GGameState->Teams[ETeam::ET_YellowTeam].Members.Num();
 				TeamToJoin = ETeam::ET_YellowTeam;
 			}
 			if (!GGameState->Teams.Contains(ETeam::ET_GreenTeam))
@@ -39,9 +39,9 @@ void ATeamGameMode::PostLogin(APlayerController* NewPlayer)
 				MinNumber = 0;
 				TeamToJoin = ETeam::ET_GreenTeam;
 			}
-			else if (GGameState->Teams[ETeam::ET_GreenTeam].Num() < MinNumber)
+			else if (GGameState->Teams[ETeam::ET_GreenTeam].Members.Num() < MinNumber)
 			{
-				MinNumber = GGameState->Teams[ETeam::ET_GreenTeam].Num();
+				MinNumber = GGameState->Teams[ETeam::ET_GreenTeam].Members.Num();
 				TeamToJoin = ETeam::ET_GreenTeam;
 			}
 			if (!GGameState->Teams.Contains(ETeam::ET_BlueTeam))
@@ -49,9 +49,9 @@ void ATeamGameMode::PostLogin(APlayerController* NewPlayer)
 				MinNumber = 0;
 				TeamToJoin = ETeam::ET_BlueTeam;
 			}
-			else if (GGameState->Teams[ETeam::ET_BlueTeam].Num() < MinNumber)
+			else if (GGameState->Teams[ETeam::ET_BlueTeam].Members.Num() < MinNumber)
 			{
-				MinNumber = GGameState->Teams[ETeam::ET_BlueTeam].Num();
+				MinNumber = GGameState->Teams[ETeam::ET_BlueTeam].Members.Num();
 				TeamToJoin = ETeam::ET_BlueTeam;
 			}
 			if (!GGameState->Teams.Contains(ETeam::ET_RedTeam))
@@ -59,9 +59,9 @@ void ATeamGameMode::PostLogin(APlayerController* NewPlayer)
 				// MinNumber = 0;
 				TeamToJoin = ETeam::ET_RedTeam;
 			}
-			else if (GGameState->Teams[ETeam::ET_RedTeam].Num() < MinNumber)
+			else if (GGameState->Teams[ETeam::ET_RedTeam].Members.Num() < MinNumber)
 			{
-				// MinNumber = GGameState->Teams[ETeam::ET_RedTeam].Num();
+				// MinNumber = GGameState->Teams[ETeam::ET_RedTeam].Members.Num();
 				TeamToJoin = ETeam::ET_RedTeam;
 			}
 
@@ -73,8 +73,8 @@ void ATeamGameMode::PostLogin(APlayerController* NewPlayer)
 			}
 			else
 			{
-				GGameState->Teams[TeamToJoin].AddUnique(SPState);
-				GGameState->TeamsAtRank[GGameState->TeamRanks[TeamToJoin]].AddUnique(TeamToJoin);
+				GGameState->Teams[TeamToJoin].Members.AddUnique(SPState);
+				GGameState->TeamsAtRank[GGameState->TeamRanks[TeamToJoin]].Teams.AddUnique(TeamToJoin);
 				SPState->SetTeam(TeamToJoin);
 				SPState->SetTeamRank(GGameState->TeamRanks[TeamToJoin]);
 			}

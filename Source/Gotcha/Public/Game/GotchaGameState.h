@@ -9,6 +9,24 @@
 
 class AShooterPlayerState;
 
+USTRUCT(BlueprintType)
+struct FTeam
+{	
+	GENERATED_BODY()
+	
+	UPROPERTY()
+	TArray<APlayerState*> Members;
+};
+
+USTRUCT(BlueprintType)
+struct FTeams
+{	
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<ETeam> Teams;
+};
+
 /**
  * 
  */
@@ -19,20 +37,26 @@ class GOTCHA_API AGotchaGameState : public AGameState
 
 public:
 	AGotchaGameState();
+	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	void UpdateTopScore(AShooterPlayerState* ScoringPlayer);
-	
+
+	UPROPERTY()
 	TArray<AShooterPlayerState*> TopPlayers;
 	
 	void ScoreTeam(ETeam ScoringTeam, int32 NumberOfTeams);
 
-	TMap<ETeam, TArray<APlayerState*>> Teams;
+	UPROPERTY()
+	TMap<ETeam, FTeam> Teams;
 
+	UPROPERTY()
 	TMap<ETeam, float> TeamScores;
 
+	UPROPERTY()
 	TMap<ETeam, int32> TeamRanks;
-	TMap<int32, TArray<ETeam>> TeamsAtRank;
+	UPROPERTY()
+	TMap<int32, FTeams> TeamsAtRank;
 
 	UPROPERTY(ReplicatedUsing = OnRep_LeaderTeam)
 	ETeam LeaderTeam = ETeam::ET_RedTeam;
@@ -41,7 +65,20 @@ public:
 
 	void CountTeamElim(ETeam Team, float TeamRespawnTime);
 
+	UPROPERTY()
 	TMap<ETeam, int32> TeamElimCounts;
+
+	UPROPERTY()
+	TMap<ETeam, float> TeamControlPercentage;
+
+	void ControlPoint(float DeltaTime);
+
+	bool bControlEnabled = true;
+
+	UPROPERTY()
+	TArray<ETeam> ControllingTeams;
+
+	float ControlSpeed = 0.f;
 
 private:
 	float TopScore = 0.f;

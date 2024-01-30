@@ -30,10 +30,14 @@ private:
 	UFUNCTION()
 	void OnRep_TeamRank();
 
+	bool bControl = false;
+
 public:
 	FORCEINLINE ETeam GetTeam() const { return Team; }
 	void SetTeam(ETeam TeamToSet);
 	FORCEINLINE int32 GetTeamRank() const { return TeamRank; }
 	FORCEINLINE void SetTeamRank(int32 Rank) { TeamRank = Rank; }
+	FORCEINLINE bool IsControlling() const { return bControl; }
+	FORCEINLINE void Control(bool bControlling) { bControl = bControlling; }
 	
 };

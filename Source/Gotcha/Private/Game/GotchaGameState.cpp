@@ -11,30 +11,44 @@
 
 AGotchaGameState::AGotchaGameState()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	
 	TeamScores.Add(ETeam::ET_RedTeam, 0.f);
 	TeamScores.Add(ETeam::ET_BlueTeam, 0.f);
 	TeamScores.Add(ETeam::ET_GreenTeam, 0.f);
 	TeamScores.Add(ETeam::ET_YellowTeam, 0.f);
 
-	Teams.Add(ETeam::ET_RedTeam, TArray<APlayerState*>());
-	Teams.Add(ETeam::ET_BlueTeam, TArray<APlayerState*>());
-	Teams.Add(ETeam::ET_GreenTeam, TArray<APlayerState*>());
-	Teams.Add(ETeam::ET_YellowTeam, TArray<APlayerState*>());
+	Teams.Add(ETeam::ET_RedTeam, FTeam());
+	Teams.Add(ETeam::ET_BlueTeam, FTeam());
+	Teams.Add(ETeam::ET_GreenTeam, FTeam());
+	Teams.Add(ETeam::ET_YellowTeam, FTeam());
 
 	TeamRanks.Add(ETeam::ET_RedTeam, 1);
 	TeamRanks.Add(ETeam::ET_BlueTeam, 1);
 	TeamRanks.Add(ETeam::ET_GreenTeam, 1);
 	TeamRanks.Add(ETeam::ET_YellowTeam, 1);
 
-	TeamsAtRank.Add(1, TArray<ETeam>());
-	TeamsAtRank.Add(2, TArray<ETeam>());
-	TeamsAtRank.Add(3, TArray<ETeam>());
-	TeamsAtRank.Add(4, TArray<ETeam>());
+	TeamsAtRank.Add(1, FTeams());
+	TeamsAtRank.Add(2, FTeams());
+	TeamsAtRank.Add(3, FTeams());
+	TeamsAtRank.Add(4, FTeams());
 
 	TeamElimCounts.Add(ETeam::ET_RedTeam, 0);
 	TeamElimCounts.Add(ETeam::ET_BlueTeam, 0);
 	TeamElimCounts.Add(ETeam::ET_GreenTeam, 0);
 	TeamElimCounts.Add(ETeam::ET_YellowTeam, 0);
+
+	TeamControlPercentage.Add(ETeam::ET_RedTeam, 0.f);
+	TeamControlPercentage.Add(ETeam::ET_BlueTeam, 0.f);
+	TeamControlPercentage.Add(ETeam::ET_GreenTeam, 0.f);
+	TeamControlPercentage.Add(ETeam::ET_YellowTeam, 0.f);
+}
+
+void AGotchaGameState::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	ControlPoint(DeltaSeconds);
 }
 
 void AGotchaGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -70,7 +84,7 @@ void AGotchaGameState::ScoreTeam(ETeam ScoringTeam, int32 NumberOfTeams)
 	TeamsAtRank.Empty();
 	for (int32 Index = 1; Index <= NumberOfTeams; ++Index)
 	{
-		TeamsAtRank.Add(Index, TArray<ETeam>());
+		TeamsAtRank.Add(Index, FTeams());
 	}
 	
 	TeamScores.ValueSort([](float A, float B)
@@ -87,13 +101,13 @@ void AGotchaGameState::ScoreTeam(ETeam ScoringTeam, int32 NumberOfTeams)
 		if (Score == PreviousScore)
 		{
 			TeamRanks[Team] = Rank;
-			TeamsAtRank[Rank].AddUnique(Team);
+			TeamsAtRank[Rank].Teams.AddUnique(Team);
 		}
 		else if (Score < PreviousScore || PreviousScore == 0.f)
 		{
-			Rank += TeamsAtRank[Rank].Num();
+			Rank += TeamsAtRank[Rank].Teams.Num();
 			TeamRanks[Team] = Rank;
-			TeamsAtRank[Rank].AddUnique(Team);
+			TeamsAtRank[Rank].Teams.AddUnique(Team);
 			PreviousScore = Score;
 		}
 	}
@@ -101,7 +115,7 @@ void AGotchaGameState::ScoreTeam(ETeam ScoringTeam, int32 NumberOfTeams)
 	for (auto TeamTuple : Teams)
 	{
 		ETeam Team = TeamTuple.Key;
-		TArray<APlayerState*> TeamMembers = TeamTuple.Value;
+		TArray<APlayerState*> TeamMembers = TeamTuple.Value.Members;
 		for (auto TeamMember : TeamMembers)
 		{
 			AShooterPlayerState* SPState = Cast<AShooterPlayerState>(TeamMember);
@@ -112,23 +126,23 @@ void AGotchaGameState::ScoreTeam(ETeam ScoringTeam, int32 NumberOfTeams)
 		}
 	}
 
-	LeaderTeam = TeamsAtRank[1][0];
+	LeaderTeam = TeamsAtRank[1].Teams[0];
 }
 
 void AGotchaGameState::RemoveFromTeam(AShooterPlayerState* PlayerToRemove)
 {
-	if (Teams[PlayerToRemove->GetTeam()].Contains(PlayerToRemove))
+	if (Teams[PlayerToRemove->GetTeam()].Members.Contains(PlayerToRemove))
 	{
-		Teams[PlayerToRemove->GetTeam()].Remove(PlayerToRemove);
+		Teams[PlayerToRemove->GetTeam()].Members.Remove(PlayerToRemove);
 	}
 }
 
 void AGotchaGameState::CountTeamElim(ETeam Team, float TeamRespawnTime)
 {
-	TeamElimCounts[Team] = FMath::Clamp(TeamElimCounts[Team] + 1, 0, Teams[Team].Num());
-	if (TeamElimCounts[Team] >= Teams[Team].Num())
+	TeamElimCounts[Team] = FMath::Clamp(TeamElimCounts[Team] + 1, 0, Teams[Team].Members.Num());
+	if (TeamElimCounts[Team] >= Teams[Team].Members.Num())
 	{
-		for (auto Member : Teams[Team])
+		for (auto Member : Teams[Team].Members)
 		{
 			AShooterCharacterBase* ShooterCharacter = Cast<AShooterCharacterBase>(Member->GetPawn());
 			if (ShooterCharacter)
@@ -153,7 +167,7 @@ void AGotchaGameState::RespawnTeam(ETeam TeamToRespawn)
 	AGotchaGameMode* GotchaGameMode = GetWorld()->GetAuthGameMode<AGotchaGameMode>();
 	if (GotchaGameMode)
 	{
-		for (auto Member : Teams[TeamToRespawn])
+		for (auto Member : Teams[TeamToRespawn].Members)
 		{
 			ACharacter* Character = Cast<ACharacter>(Member->GetPawn());
 			if (Character)
@@ -162,6 +176,14 @@ void AGotchaGameState::RespawnTeam(ETeam TeamToRespawn)
 			}
 		}
 		TeamElimCounts[TeamToRespawn] = 0;
+	}
+}
+
+void AGotchaGameState::ControlPoint(float DeltaTime)
+{
+	if (bControlEnabled && ControllingTeams.Num() == 1)
+	{
+		TeamControlPercentage[ControllingTeams[0]] = FMath::Clamp(TeamControlPercentage[ControllingTeams[0]] + ControlSpeed * DeltaTime, 0.f, 1.f);
 	}
 }
 
