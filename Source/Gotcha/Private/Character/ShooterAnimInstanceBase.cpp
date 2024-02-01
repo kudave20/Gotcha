@@ -40,4 +40,6 @@ void UShooterAnimInstanceBase::NativeUpdateAnimation(float DeltaTime)
 	{
 		WeaponType = ShooterCharacter->GetEquippedWeapon()->GetWeaponType();
 	}
+
+	AO_Pitch = ShooterCharacter->GetAO_Pitch();
 }

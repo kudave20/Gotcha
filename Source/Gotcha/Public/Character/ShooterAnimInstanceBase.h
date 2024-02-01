@@ -39,5 +39,8 @@ private:
 
 	UPROPERTY(BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))
 	EWeaponType WeaponType;
+
+	UPROPERTY(BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))
+	float AO_Pitch;
 	
 };

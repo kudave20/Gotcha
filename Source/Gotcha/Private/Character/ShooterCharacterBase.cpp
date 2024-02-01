@@ -21,6 +21,7 @@
 #include "Game/TeamGameMode.h"
 #include "Interface/InteractableInterface.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Player/ShooterPlayerState.h"
 #include "Weapon/Flag.h"
 
@@ -94,6 +95,8 @@ void AShooterCharacterBase::BeginPlay()
 void AShooterCharacterBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	AimOffset();
 
 	if (HasAuthority())
 	{
@@ -183,6 +186,17 @@ void AShooterCharacterBase::MulticastRespawnImmediately_Implementation()
 	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 	EquipWeapons();
 	UpdateHUDHealth();
+}
+
+void AShooterCharacterBase::AimOffset()
+{
+	AO_Pitch = GetBaseAimRotation().Pitch;
+	if (AO_Pitch > 90.f && !IsLocallyControlled())
+	{
+		FVector2D InRange(270.f, 360.f);
+		FVector2D OutRange(-90.f, 0.f);
+		AO_Pitch = FMath::GetMappedRangeValueClamped(InRange, OutRange, AO_Pitch);
+	}
 }
 
 void AShooterCharacterBase::CheckGrapple()

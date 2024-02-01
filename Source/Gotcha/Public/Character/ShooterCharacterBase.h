@@ -133,6 +133,11 @@ private:
 	void Interact();
 	void Respawn();
 
+	void AimOffset();
+
+	float AO_Pitch;
+	FRotator StartingAimRotation;
+
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	TSubclassOf<AWeapon> PrimaryGunClass;
 
@@ -280,6 +285,7 @@ public:
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 	FORCEINLINE int32 GetJumpCount() const { return JumpCount; }
 	FORCEINLINE TObjectPtr<UCombatComponent> GetCombat() const { return Combat; }
+	FORCEINLINE float GetAO_Pitch() const { return AO_Pitch; }
 	bool IsHoldingFlag() const;
 	void SetHoldingFlag(bool bHolding);
 	
