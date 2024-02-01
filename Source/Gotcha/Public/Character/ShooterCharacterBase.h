@@ -119,7 +119,6 @@ private:
 	TObjectPtr<UInputAction> RespawnAction;
 
 	void Move(const FInputActionValue& InputActionValue);
-	void MoveButtonReleased();
 	void Look(const FInputActionValue& InputActionValue);
 	virtual void Jump() override;
 	void JumpButtonReleased();
@@ -141,15 +140,17 @@ private:
 	TSubclassOf<AWeapon> SecondaryGunClass;
 
 	UFUNCTION(Server, Reliable)
+	void ServerJumpButtonPressed(const FVector_NetQuantize& InputVector);
+
+	UFUNCTION(Server, Reliable)
 	void ServerLaunchCharacter(const FVector_NetQuantize& LaunchForce);
 
-	FVector JumpDirection;
+	UPROPERTY(Replicated)
 	int32 JumpCount = 0;
 
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	int32 MaxJumpCount = 2;
 
-	FVector DashDirection;
 	int32 DashCount = 0;
 	
 	UPROPERTY(EditAnywhere, Category = "Properties")
@@ -235,8 +236,6 @@ private:
 	bool bJumpButtonHeld;
 
 	UFUNCTION(Server, Reliable)
-	void ServerHoldJumpButton();
-	UFUNCTION(Server, Reliable)
 	void ServerReleaseJumpButton();
 	
 	UPROPERTY(EditAnywhere, Category = "Properties")
@@ -279,6 +278,7 @@ public:
 	AWeapon* GetEquippedWeapon();
 	FORCEINLINE float GetParryTime() const { return ParryTime; }
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
+	FORCEINLINE int32 GetJumpCount() const { return JumpCount; }
 	FORCEINLINE TObjectPtr<UCombatComponent> GetCombat() const { return Combat; }
 	bool IsHoldingFlag() const;
 	void SetHoldingFlag(bool bHolding);

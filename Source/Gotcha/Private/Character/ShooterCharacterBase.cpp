@@ -29,7 +29,7 @@ AShooterCharacterBase::AShooterCharacterBase()
 	PrimaryActorTick.bCanEverTick = true;
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-	Camera->SetupAttachment(GetMesh(), FName("Head"));
+	Camera->SetupAttachment(GetMesh(), FName("head"));
 	Camera->bUsePawnControlRotation = true;
 
 	Combat = CreateDefaultSubobject<UCombatComponent>(TEXT("Combat"));
@@ -111,7 +111,6 @@ void AShooterCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent);
 
 	EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Move);
-	EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &AShooterCharacterBase::MoveButtonReleased);
 	EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AShooterCharacterBase::Look);
 	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Jump);
 	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &AShooterCharacterBase::JumpButtonReleased);
@@ -146,6 +145,7 @@ void AShooterCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	DOREPLIFETIME(AShooterCharacterBase, bIsGrappling);
 	DOREPLIFETIME(AShooterCharacterBase, bCanGrapple);
 	DOREPLIFETIME(AShooterCharacterBase, bIsMantling);
+	DOREPLIFETIME(AShooterCharacterBase, JumpCount);
 }
 
 void AShooterCharacterBase::OnRep_PlayerState()
@@ -349,20 +349,6 @@ void AShooterCharacterBase::Move(const FInputActionValue& InputActionValue)
 	
 	AddMovementInput(ForwardDirection, InputAxisVector.Y);
 	AddMovementInput(RightDirection, InputAxisVector.X);
-	JumpDirection = ForwardDirection * InputAxisVector.Y + RightDirection * InputAxisVector.X + FVector::UpVector;
-	DashDirection = ForwardDirection * InputAxisVector.Y + RightDirection * InputAxisVector.X;
-}
-
-void AShooterCharacterBase::MoveButtonReleased()
-{
-	if (bDisableGameplay) return;
-	
-	if (Camera)
-	{
-		JumpDirection = FVector::UpVector;
-		DashDirection = Camera->GetForwardVector();
-		DashDirection.Z = 0.f;
-	}
 }
 
 void AShooterCharacterBase::Look(const FInputActionValue& InputActionValue)
@@ -378,7 +364,17 @@ void AShooterCharacterBase::Look(const FInputActionValue& InputActionValue)
 void AShooterCharacterBase::Jump()
 {
 	if (bDisableGameplay) return;
-	
+
+	ServerJumpButtonPressed(LastControlInputVector);
+
+	if (CanJump())
+	{
+		Super::Jump();
+	}
+}
+
+void AShooterCharacterBase::ServerJumpButtonPressed_Implementation(const FVector_NetQuantize& InputVector)
+{
 	if (bIsCrouched)
 	{
 		UnCrouch();
@@ -392,29 +388,21 @@ void AShooterCharacterBase::Jump()
 		GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 		return;
 	}
-
-	ServerHoldJumpButton();
-		
+	
+	bJumpButtonHeld = true;
+	
 	if (JumpCount >= 1 && JumpCount < MaxJumpCount && !CanJump())
 	{
-		if (JumpDirection == FVector::ZeroVector)
-		{
-			JumpDirection = FVector::UpVector;
-		}
-		const FVector JumpForce = JumpDirection * GetCharacterMovement()->JumpZVelocity;
-		ServerLaunchCharacter(JumpForce);
-		JumpCount++;
+		FVector JumpDirection = InputVector;
+		JumpDirection.Z = 1.f;
+		FVector JumpForce = JumpDirection * GetCharacterMovement()->JumpZVelocity;
+		LaunchCharacter(JumpForce, true, true);
+		++JumpCount;
 	}
 	else if (CanJump())
 	{
-		Super::Jump();
 		JumpCount = 1;
 	}
-}
-
-void AShooterCharacterBase::ServerHoldJumpButton_Implementation()
-{
-	bJumpButtonHeld = true;
 }
 
 void AShooterCharacterBase::JumpButtonReleased()
@@ -451,12 +439,7 @@ void AShooterCharacterBase::Dash()
 	{
 		SetCollisionBetweenCharacter(ECR_Ignore);
 		
-		if (GetVelocity() == FVector::ZeroVector)
-		{
-			DashDirection = Camera->GetForwardVector();
-			DashDirection.Z = 0.f;
-		}
-		DashDirection.Normalize();
+		FVector DashDirection = LastControlInputVector.Equals(FVector::ZeroVector) ? Camera->GetForwardVector() : LastControlInputVector;
 		DashDirection *= DashForce;
 		ServerLaunchCharacter(DashDirection);
 
@@ -637,10 +620,6 @@ void AShooterCharacterBase::ServerInteract_Implementation()
 	{
 		ShooterPlayerController = ShooterPlayerController == nullptr ? Cast<AShooterPlayerController>(Controller) : ShooterPlayerController;
 		Interactable->OnInteract(ShooterPlayerController);
-	}
-	else if (InteractResult.GetActor())
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("%s"), *InteractResult.GetActor()->GetName()));;
 	}
 }
 

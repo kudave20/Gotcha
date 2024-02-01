@@ -8,7 +8,6 @@
 #include "ShooterAnimInstanceBase.generated.h"
 
 class AShooterCharacterBase;
-class AWeapon;
 
 /**
  * 
@@ -24,10 +23,19 @@ public:
 
 private:
 	UPROPERTY(BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))
-	AShooterCharacterBase* ShooterCharacter;
+	TObjectPtr<AShooterCharacterBase> ShooterCharacter;
 	
 	UPROPERTY(BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))
 	float Speed;
+	
+	UPROPERTY(BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))
+	float YawOffset;
+
+	UPROPERTY(BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))
+	int32 JumpCount;
+
+	UPROPERTY(BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))
+	bool bIsInAir;
 
 	UPROPERTY(BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))
 	EWeaponType WeaponType;
