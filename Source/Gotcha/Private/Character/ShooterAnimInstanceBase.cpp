@@ -42,4 +42,16 @@ void UShooterAnimInstanceBase::NativeUpdateAnimation(float DeltaTime)
 	}
 
 	AO_Pitch = ShooterCharacter->GetAO_Pitch();
+
+	EquippedWeapon = ShooterCharacter->GetEquippedWeapon();
+
+	if (EquippedWeapon && EquippedWeapon->GetWeaponMesh() && ShooterCharacter->GetMesh())
+	{
+		LeftHandTransform = EquippedWeapon->GetWeaponMesh()->GetSocketTransform(FName("LeftHandSocket"), RTS_World);
+		FVector LeftHandLocation;
+		FRotator LeftHandRotation;
+		ShooterCharacter->GetMesh()->TransformToBoneSpace(FName("hand_r"), LeftHandTransform.GetLocation(), FRotator::ZeroRotator, LeftHandLocation, LeftHandRotation);
+		LeftHandTransform.SetLocation(LeftHandLocation);
+		LeftHandTransform.SetRotation(FQuat(LeftHandRotation));
+	}
 }

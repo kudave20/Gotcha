@@ -25,11 +25,11 @@ public:
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Game Settings")
-	int32 NumberOfTeams = 4;
+	uint32 NumberOfTeams = 4;
 	
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Game Settings")
-	int32 TeamMemberLimit = 3;
+	uint32 TeamMemberLimit = 3;
 
 	UPROPERTY(EditAnywhere, Category = "Game Settings")
 	float TeamRespawnTime = 15.f;

@@ -8,6 +8,7 @@
 #include "ShooterAnimInstanceBase.generated.h"
 
 class AShooterCharacterBase;
+class AWeapon;
 
 /**
  * 
@@ -42,5 +43,11 @@ private:
 
 	UPROPERTY(BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))
 	float AO_Pitch;
+
+	UPROPERTY(BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<AWeapon> EquippedWeapon;
+
+	UPROPERTY(BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))
+	FTransform LeftHandTransform;
 	
 };

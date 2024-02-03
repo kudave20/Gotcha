@@ -45,7 +45,7 @@ public:
 	UPROPERTY()
 	TArray<AShooterPlayerState*> TopPlayers;
 	
-	void ScoreTeam(ETeam ScoringTeam, int32 NumberOfTeams);
+	void ScoreTeam(ETeam ScoringTeam, uint32 NumberOfTeams);
 
 	UPROPERTY()
 	TMap<ETeam, FTeam> Teams;
@@ -54,9 +54,9 @@ public:
 	TMap<ETeam, float> TeamScores;
 
 	UPROPERTY()
-	TMap<ETeam, int32> TeamRanks;
+	TMap<ETeam, uint32> TeamRanks;
 	UPROPERTY()
-	TMap<int32, FTeams> TeamsAtRank;
+	TMap<uint32, FTeams> TeamsAtRank;
 
 	UPROPERTY(ReplicatedUsing = OnRep_LeaderTeam)
 	ETeam LeaderTeam = ETeam::ET_RedTeam;

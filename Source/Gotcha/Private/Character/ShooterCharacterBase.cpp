@@ -21,7 +21,6 @@
 #include "Game/TeamGameMode.h"
 #include "Interface/InteractableInterface.h"
 #include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetMathLibrary.h"
 #include "Player/ShooterPlayerState.h"
 #include "Weapon/Flag.h"
 

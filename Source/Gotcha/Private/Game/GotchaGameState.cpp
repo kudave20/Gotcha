@@ -77,14 +77,14 @@ void AGotchaGameState::UpdateTopScore(AShooterPlayerState* ScoringPlayer)
 	}
 }
 
-void AGotchaGameState::ScoreTeam(ETeam ScoringTeam, int32 NumberOfTeams)
+void AGotchaGameState::ScoreTeam(ETeam ScoringTeam, uint32 NumberOfTeams)
 {
 	++TeamScores[ScoringTeam];
 
 	TeamsAtRank.Empty();
-	for (int32 Index = 1; Index <= NumberOfTeams; ++Index)
+	for (uint32 i = 1; i <= NumberOfTeams; i++)
 	{
-		TeamsAtRank.Add(Index, FTeams());
+		TeamsAtRank.Add(i, FTeams());
 	}
 	
 	TeamScores.ValueSort([](float A, float B)
@@ -92,7 +92,7 @@ void AGotchaGameState::ScoreTeam(ETeam ScoringTeam, int32 NumberOfTeams)
 		return A > B;
 	});
 		
-	int32 Rank = 1;
+	uint32 Rank = 1;
 	float PreviousScore = 0.f;
 	for (auto TeamScore : TeamScores)
 	{

@@ -11,7 +11,7 @@ AWeapon::AWeapon()
 	bReplicates = true;
 	SetReplicateMovement(true);
 
-	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
+	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
 	SetRootComponent(WeaponMesh);
 	WeaponMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
 	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -43,10 +43,11 @@ void AWeapon::Fire(const FVector& HitTarget)
 		return;
 	}
 	
-	if (FireAnimation && WeaponMesh)
-	{
-		WeaponMesh->PlayAnimation(FireAnimation, false);
-	}
+	// if (FireAnimation && WeaponMesh)
+	// {
+	// 	WeaponMesh->PlayAnimation(FireAnimation, false);
+	// }
+	
 	SpendRound();
 }
 
