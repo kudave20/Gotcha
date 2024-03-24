@@ -17,7 +17,7 @@ void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargets)
 	
 	AController* InstigatorController = OwnerPawn->GetController();
 
-	const UStaticMeshSocket* MuzzleFlashSocket = GetWeaponMesh()->GetSocketByName("MuzzleFlash");
+	const UStaticMeshSocket* MuzzleFlashSocket = GetWeaponMesh()->GetSocketByName("MuzzleFlashSocket");
 	if (MuzzleFlashSocket)
 	{
 		FTransform SocketTransform;
@@ -37,29 +37,52 @@ void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargets)
 					if (HitMap.Contains(Character)) HitMap[Character]++;
 					else HitMap.Emplace(Character, 1);
 				}
-				if (ImpactParticles)
+				else
 				{
-					UGameplayStatics::SpawnEmitterAtLocation(
-						GetWorld(),
-						ImpactParticles,
-						FireHit.ImpactPoint,
-						FireHit.ImpactNormal.Rotation()
-					);
-				}
-				if (HitSound)
-				{
-					UGameplayStatics::PlaySoundAtLocation(
-						this,
-						HitSound,
-						FireHit.ImpactPoint,
-						0.5f,
-						FMath::FRandRange(-0.5f, 0.5f)
-					);
+					if (ImpactParticle)
+					{
+						UGameplayStatics::SpawnEmitterAtLocation(
+							GetWorld(),
+							ImpactParticle,
+							FireHit.ImpactPoint,
+							FireHit.ImpactNormal.Rotation()
+						);
+					}
+					if (HitSound)
+					{
+						UGameplayStatics::PlaySoundAtLocation(
+							this,
+							HitSound,
+							FireHit.ImpactPoint,
+							0.5f,
+							FMath::FRandRange(-0.5f, 0.5f)
+						);
+					}
 				}
 			}
 		}
 
-		if (!HasAuthority()) return;
+		if (!HasAuthority())
+		{
+			if (MuzzleFlash)
+			{
+				UGameplayStatics::SpawnEmitterAtLocation(
+					GetWorld(),
+					MuzzleFlash,
+					SocketTransform
+				);
+			}
+			if (FireSound)
+			{
+				UGameplayStatics::PlaySoundAtLocation(
+					this,
+					FireSound,
+					GetActorLocation()
+				);
+			}
+			
+			return;
+		}
 		
 		TMap<AShooterCharacterBase*, float> DamageMap;
 
@@ -104,7 +127,7 @@ void AShotgun::ShotgunTraceEndWithScatter(const FVector& HitTarget, TArray<FVect
 		const FVector RandVec = UKismetMathLibrary::RandomUnitVector() * FMath::FRandRange(0.f, SphereRadius);
 		const FVector EndLoc = SphereCenter + RandVec;
 		FVector ToEndLoc = EndLoc - TraceStart;
-		ToEndLoc = TraceStart + ToEndLoc * TRACE_LENGTH / ToEndLoc.Size();
+		ToEndLoc = TraceStart + ToEndLoc * TraceLength / ToEndLoc.Size();
 
 		HitTargets.Add(ToEndLoc);
 	}

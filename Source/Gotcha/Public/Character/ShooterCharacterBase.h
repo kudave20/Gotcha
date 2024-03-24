@@ -34,7 +34,6 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnRep_PlayerState() override;
 
-	void EquipWeapons();
 	void HoldFlag(AFlag* Flag);
 	
 	void Elim(bool bPlayerLeftGame);
@@ -64,14 +63,17 @@ protected:
 	void DestroyWeapons();
 
 private:
-	UPROPERTY(VisibleAnywhere, Category = Camera)
+	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UCameraComponent> Camera;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<USkeletalMeshComponent> Arm;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<USkeletalMeshComponent> Hand;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Components")
 	TObjectPtr<UCombatComponent> Combat;
-
-	UPROPERTY(VisibleAnywhere, Category = "Components")
-	TObjectPtr<USphereComponent> AssistArea;
 	
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UCableComponent> Hook;
@@ -107,9 +109,6 @@ private:
 	TObjectPtr<UInputAction> SwapAction;
 
 	UPROPERTY(EditAnywhere, Category = Input)
-	TObjectPtr<UInputAction> ParryAction;
-
-	UPROPERTY(EditAnywhere, Category = Input)
 	TObjectPtr<UInputAction> GrappleAction;
 
 	UPROPERTY(EditAnywhere, Category = Input)
@@ -128,21 +127,22 @@ private:
 	void FireButtonReleased();
 	void Reload();
 	void SwapWeapons();
-	void Parry();
+	// void Parry();
 	void Grapple();
 	void Interact();
 	void Respawn();
-
+	
+	void EquipWeapon();
 	void AimOffset();
 
 	float AO_Pitch;
 	FRotator StartingAimRotation;
 
 	UPROPERTY(EditAnywhere, Category = "Properties")
-	TSubclassOf<AWeapon> PrimaryGunClass;
+	TSubclassOf<AWeapon> PrimaryWeaponClass;
 
 	UPROPERTY(EditAnywhere, Category = "Properties")
-	TSubclassOf<AWeapon> SecondaryGunClass;
+	TSubclassOf<AWeapon> SecondaryWeaponClass;
 
 	UFUNCTION(Server, Reliable)
 	void ServerJumpButtonPressed(const FVector_NetQuantize& InputVector);
@@ -208,9 +208,6 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	TObjectPtr<UAnimMontage> FireWeaponMontage;
-	
-	UPROPERTY(EditAnywhere, Category = "Properties")
-	float ParryTime = 0.3f;
 
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	float HookLength = 3000.f;
@@ -277,15 +274,19 @@ private:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRespawnImmediately();
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	float TraceLength = 2000.f;
 	
 public:	
 	FORCEINLINE TObjectPtr<UCameraComponent> GetCamera() const { return Camera; }
+	FORCEINLINE TObjectPtr<USkeletalMeshComponent> GetArm() const { return Arm; }
 	AWeapon* GetEquippedWeapon();
-	FORCEINLINE float GetParryTime() const { return ParryTime; }
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 	FORCEINLINE int32 GetJumpCount() const { return JumpCount; }
 	FORCEINLINE TObjectPtr<UCombatComponent> GetCombat() const { return Combat; }
 	FORCEINLINE float GetAO_Pitch() const { return AO_Pitch; }
+	FORCEINLINE float GetTraceLength() const { return TraceLength; }
 	bool IsHoldingFlag() const;
 	void SetHoldingFlag(bool bHolding);
 	

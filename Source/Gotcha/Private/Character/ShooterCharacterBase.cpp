@@ -9,7 +9,6 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Weapon/Weapon.h"
 #include "Component/CombatComponent.h"
-#include "Components/SphereComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/ShooterPlayerController.h"
 #include "Game/GotchaGameMode.h"
@@ -27,21 +26,25 @@
 AShooterCharacterBase::AShooterCharacterBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
-
+	
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-	Camera->SetupAttachment(GetMesh(), FName("head"));
+	Camera->SetupAttachment(RootComponent);
 	Camera->bUsePawnControlRotation = true;
+
+	Arm = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Arm"));
+	Arm->SetupAttachment(Camera);
+	Arm->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Arm->bOnlyOwnerSee = true;
+	Arm->CastShadow = false;
+
+	Hand = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Hand"));
+	Hand->SetupAttachment(Camera);
+	Hand->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Hand->bOnlyOwnerSee = true;
+	Hand->CastShadow = false;
 
 	Combat = CreateDefaultSubobject<UCombatComponent>(TEXT("Combat"));
 	Combat->SetIsReplicated(true);
-
-	AssistArea = CreateDefaultSubobject<USphereComponent>(TEXT("AssistArea"));
-	AssistArea->SetupAttachment(GetCapsuleComponent());
-	AssistArea->SetSphereRadius(128.f);
-	AssistArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	AssistArea->SetCollisionObjectType(ECC_WorldDynamic);
-	AssistArea->SetCollisionResponseToAllChannels(ECR_Ignore);
-	AssistArea->SetCollisionResponseToChannel(ECC_Assist, ECR_Block);
 	
 	Hook = CreateDefaultSubobject<UCableComponent>(TEXT("Hook"));
 	Hook->SetupAttachment(GetCapsuleComponent());
@@ -63,7 +66,8 @@ AShooterCharacterBase::AShooterCharacterBase()
 	GetMesh()->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
 	GetMesh()->SetCollisionResponseToChannel(ECC_Assist, ECR_Block);
 	GetMesh()->SetGenerateOverlapEvents(true);
-	GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+	GetMesh()->bOwnerNoSee = true;
+	GetMesh()->CastShadow = false;
 
 	GetCharacterMovement()->MaxWalkSpeed = 1200.f;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = 600.f;
@@ -87,7 +91,7 @@ void AShooterCharacterBase::BeginPlay()
 	if (HasAuthority())
 	{
 		OnTakeAnyDamage.AddDynamic(this, &AShooterCharacterBase::ReceiveDamage);
-		EquipWeapons();
+		EquipWeapon();
 	}
 }
 
@@ -122,7 +126,6 @@ void AShooterCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInp
 	EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Completed, this, &AShooterCharacterBase::FireButtonReleased);
 	EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Reload);
 	EnhancedInputComponent->BindAction(SwapAction, ETriggerEvent::Started, this, &AShooterCharacterBase::SwapWeapons);
-	EnhancedInputComponent->BindAction(ParryAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Parry);
 	EnhancedInputComponent->BindAction(GrappleAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Grapple);
 	EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Interact);
 	EnhancedInputComponent->BindAction(RespawnAction, ETriggerEvent::Started, this, &AShooterCharacterBase::Respawn);
@@ -183,7 +186,7 @@ void AShooterCharacterBase::MulticastRespawnImmediately_Implementation()
 	Health = MaxHealth;
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-	EquipWeapons();
+	//EquipWeapon();
 	UpdateHUDHealth();
 }
 
@@ -543,16 +546,6 @@ void AShooterCharacterBase::SwapWeapons()
 	}
 }
 
-void AShooterCharacterBase::Parry()
-{
-	if (bDisableGameplay) return;
-
-	if (Combat)
-	{
-		Combat->ParryButtonPressed();
-	}
-}
-
 void AShooterCharacterBase::Grapple()
 {
 	if (bDisableGameplay) return;
@@ -668,8 +661,8 @@ void AShooterCharacterBase::PlayFireMontage()
 		case EWeaponType::EWT_Shotgun:
 			SectionName = FName("Shotgun");
 			break;
-		case EWeaponType::EWT_Katana:
-			SectionName = FName("Katana");
+		case EWeaponType::EWT_RocketLauncher:
+			SectionName = FName("RocketLauncher");
 			break;
 		default:
 			break;
@@ -683,12 +676,6 @@ void AShooterCharacterBase::ReceiveDamage(AActor* DamagedActor, float Damage, co
 {
 	GotchaGameMode = GotchaGameMode == nullptr ? GetWorld()->GetAuthGameMode<AGotchaGameMode>() : GotchaGameMode;
 	if (bElimmed || GotchaGameMode == nullptr) return;
-
-	if (Combat)
-	{
-		AWeapon* DamageCausedWeapon = Cast<AWeapon>(DamageCauser);
-		if (Combat->Parry(DamageCausedWeapon)) return;
-	}
 	
 	Health = FMath::Clamp(Health - Damage, 0.f, MaxHealth);
 	
@@ -751,17 +738,17 @@ void AShooterCharacterBase::DestroyWeapons()
 	}
 }
 
-void AShooterCharacterBase::EquipWeapons()
+void AShooterCharacterBase::EquipWeapon()
 {
-	if (Combat == nullptr || !HasAuthority()) return;
-	
-	if (PrimaryGunClass && SecondaryGunClass)
+	if (Combat == nullptr) return;
+
+	if (PrimaryWeaponClass && SecondaryWeaponClass)
 	{
-		AWeapon* PrimaryGun = GetWorld()->SpawnActor<AWeapon>(PrimaryGunClass);
-		AWeapon* SecondaryGun = GetWorld()->SpawnActor<AWeapon>(SecondaryGunClass);
-		if (PrimaryGun && SecondaryGun)
+		AWeapon* PrimaryWeapon = GetWorld()->SpawnActor<AWeapon>(PrimaryWeaponClass);
+		AWeapon* SecondaryWeapon = GetWorld()->SpawnActor<AWeapon>(SecondaryWeaponClass);
+		if (PrimaryWeapon && SecondaryWeapon)
 		{
-			Combat->EquipWeapons(PrimaryGun, SecondaryGun);
+			Combat->EquipWeapon(PrimaryWeapon, SecondaryWeapon);
 		}
 	}
 }

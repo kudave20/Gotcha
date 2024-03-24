@@ -4,10 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GotchaType/WeaponTypes.h"
+#include "GotchaType/FireTypes.h"
 #include "GameFramework/Actor.h"
 #include "Weapon.generated.h"
-
-#define TRACE_LENGTH 2000.f
 
 class UTexture2D;
 class UAnimationAsset;
@@ -25,20 +24,21 @@ public:
 
 	virtual void Fire(const FVector& HitTarget);
 	void Reload();
+	FVector TraceEndWithScatter(const FVector& HitTarget);
 	
-	UPROPERTY(EditAnywhere, Category = Crosshairs)
+	UPROPERTY(EditAnywhere, Category = "Crosshairs")
 	TObjectPtr<UTexture2D> CrosshairsCenter;
 
-	UPROPERTY(EditAnywhere, Category = Crosshairs)
+	UPROPERTY(EditAnywhere, Category = "Crosshairs")
 	TObjectPtr<UTexture2D> CrosshairsLeft;
 
-	UPROPERTY(EditAnywhere, Category = Crosshairs)
+	UPROPERTY(EditAnywhere, Category = "Crosshairs")
 	TObjectPtr<UTexture2D> CrosshairsRight;
 
-	UPROPERTY(EditAnywhere, Category = Crosshairs)
+	UPROPERTY(EditAnywhere, Category = "Crosshairs")
 	TObjectPtr<UTexture2D> CrosshairsTop;
 
-	UPROPERTY(EditAnywhere, Category = Crosshairs)
+	UPROPERTY(EditAnywhere, Category = "Crosshairs")
 	TObjectPtr<UTexture2D> CrosshairsBottom;
 
 	UPROPERTY(EditAnywhere, Category = "Properties")
@@ -53,20 +53,26 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	bool bUseScatter;
 
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	EFireType FireType;
+
 protected:
 	virtual void BeginPlay() override;
 	
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> WeaponMesh;
 
-	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
+	UPROPERTY(EditAnywhere, Category = "Properties", meta = (EditCondition = "bUseScatter"))
 	float DistanceToSphere = 800.f;
 
-	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
+	UPROPERTY(EditAnywhere, Category = "Properties", meta = (EditCondition = "bUseScatter"))
 	float SphereRadius = 75.f;
 	
 	UPROPERTY(EditAnywhere, Category = "Properties")
 	float Damage = 10.f;
+
+	UPROPERTY(EditAnywhere, Category = "Properties")
+	float TraceLength = 2000.f;
 
 	UPROPERTY()
 	AShooterCharacterBase* OwnerCharacter;

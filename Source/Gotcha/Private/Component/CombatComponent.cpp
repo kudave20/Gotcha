@@ -5,13 +5,11 @@
 #include "Camera/CameraComponent.h"
 #include "Character/ShooterCharacterBase.h"
 #include "Components/BoxComponent.h"
+#include "Engine/SkeletalMeshSocket.h"
 #include "Player/ShooterPlayerController.h"
 #include "Weapon/Weapon.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
-#include "Engine/SkeletalMeshSocket.h"
-#include "Gotcha/Gotcha.h"
 #include "Weapon/MeleeWeapon.h"
 #include "Weapon/Shotgun.h"
 
@@ -65,12 +63,17 @@ void UCombatComponent::Fire()
 		if (EquippedWeapon)
 		{
 			CrosshairShootingFactor = 0.75f;
-			switch (EquippedWeapon->GetWeaponType())
+			switch (EquippedWeapon->FireType)
 			{
-			case EWeaponType::EWT_Shotgun:
+			case EFireType::EFT_HitScan:
+				break;
+			case EFireType::EFT_Projectile:
+				FireProjectileWeapon();
+				break;
+			case EFireType::EFT_Shotgun:
 				FireShotgun();
 				break;
-			case EWeaponType::EWT_Katana:
+			case EFireType::EFT_Melee:
 				FireMeleeWeapon();
 				break;
 			default:
@@ -78,6 +81,26 @@ void UCombatComponent::Fire()
 			}
 		}
 		StartFireTimer();
+	}
+}
+
+void UCombatComponent::FireProjectileWeapon()
+{
+	if (EquippedWeapon && Character)
+	{
+		HitTarget = EquippedWeapon->bUseScatter ? EquippedWeapon->TraceEndWithScatter(HitTarget) : HitTarget;
+		if (!Character->HasAuthority()) LocalFire(HitTarget);
+		ServerFire(HitTarget);
+	}
+}
+
+void UCombatComponent::LocalFire(const FVector_NetQuantize& TraceHitTarget)
+{
+	if (EquippedWeapon == nullptr) return;
+	if (Character)
+	{
+		Character->PlayFireMontage();
+		EquippedWeapon->Fire(TraceHitTarget);
 	}
 }
 
@@ -209,14 +232,15 @@ void UCombatComponent::SwapWeapons()
 
 void UCombatComponent::ServerSwapWeapons_Implementation()
 {
-	AWeapon* PreviousSecondaryWeapon = SecondaryWeapon;
+	if (Character == nullptr) return;
+
 	if (EquippedWeapon)
 	{
-		AttachWeaponToBackpack(EquippedWeapon);
-	}
-	if (PreviousSecondaryWeapon)
-	{
-		AttachWeaponToRightHand(PreviousSecondaryWeapon);
+		EquippedWeapon->GetWeaponMesh()->SetVisibility(false);
+		SecondaryWeapon->GetWeaponMesh()->SetVisibility(true);
+		AWeapon* Weapon = EquippedWeapon;
+		EquippedWeapon = SecondaryWeapon;
+		SecondaryWeapon = Weapon;
 	}
 }
 
@@ -238,113 +262,23 @@ void UCombatComponent::HandleReload()
 	//Character->PlayReloadMontage();
 }
 
-void UCombatComponent::ParryButtonPressed()
-{
-	if (bIsParrying) return;
-	ServerParry();
-}
-
-void UCombatComponent::ServerParry_Implementation()
+void UCombatComponent::EquipWeapon(AWeapon* PrimaryGun, AWeapon* SecondaryGun)
 {
 	if (Character == nullptr) return;
-	
-	bIsParrying = true;
-	AWeapon* PreviousSecondaryWeapon = SecondaryWeapon;
-	AttachWeaponToBackpack(EquippedWeapon);
-	AttachWeaponToRightHand(PreviousSecondaryWeapon);
-	
-	Character->GetWorldTimerManager().SetTimer(
-		ParryTimer,
-		this,
-		&UCombatComponent::ParryTimerFinished,
-		Character->GetParryTime()
-	);
-}
 
-
-void UCombatComponent::ParryTimerFinished()
-{
-	bIsParrying = false;
-	AWeapon* PreviousSecondaryWeapon = SecondaryWeapon;
-	AttachWeaponToBackpack(EquippedWeapon);
-	AttachWeaponToRightHand(PreviousSecondaryWeapon);
-}
-
-bool UCombatComponent::Parry(AWeapon* DamageCauser)
-{
-	if (!bIsParrying) return false;
-	
-	if (DamageCauser == nullptr || DamageCauser->GetWeaponType() != EWeaponType::EWT_Shotgun) return false;
-	
-	UWorld* World = GetWorld();
-	if (World == nullptr) return false;
-
-	if (Character && Character->GetCamera())
+	const USkeletalMeshSocket* HandSocket = Character->GetArm()->GetSocketByName(FName("RightHandSocket"));
+	if (PrimaryGun)
 	{
-		FVector Direction = Character->GetBaseAimRotation().Vector();
-		FVector Start = Character->GetCamera()->GetComponentLocation();
-		FVector End = Start + Direction * TRACE_LENGTH;
-		FCollisionQueryParams QueryParams;
-		QueryParams.AddIgnoredActor(Character);
-		
-		FHitResult ParryResult;
-		World->LineTraceSingleByChannel(
-			ParryResult,
-			Start,
-			End,
-			ECC_Assist,
-			QueryParams
-		);
-		AShooterCharacterBase* ShooterCharacter = Cast<AShooterCharacterBase>(ParryResult.GetActor());
-		if (ShooterCharacter)
-		{
-			UGameplayStatics::ApplyDamage(
-				ShooterCharacter,
-				ShooterCharacter->GetMaxHealth(),
-				Controller,
-				EquippedWeapon,
-				UDamageType::StaticClass()
-			);
-
-			return true;
-		}
+		HandSocket->AttachActor(PrimaryGun, Character->GetArm());
+		PrimaryGun->SetOwner(Character);
+		EquippedWeapon = PrimaryGun;
 	}
-	
-	return false;
-}
-
-void UCombatComponent::EquipWeapons(AWeapon* PrimaryGun, AWeapon* SecondaryGun)
-{
-	if (PrimaryGun && SecondaryGun)
+	if (SecondaryGun)
 	{
-		AttachWeaponToRightHand(PrimaryGun);
-		AttachWeaponToBackpack(SecondaryGun);
-	}
-}
-
-void UCombatComponent::AttachWeaponToRightHand(AWeapon* WeaponToAttach)
-{
-	if (Character == nullptr) return;
-	
-	const USkeletalMeshSocket* HandSocket = Character->GetMesh()->GetSocketByName(FName("RightHandSocket"));
-	if (HandSocket && WeaponToAttach)
-	{
-		HandSocket->AttachActor(WeaponToAttach, Character->GetMesh());
-		WeaponToAttach->SetOwner(Character);
-		EquippedWeapon = WeaponToAttach;
-	}
-}
-
-void UCombatComponent::AttachWeaponToBackpack(AWeapon* WeaponToAttach)
-{
-	if (Character == nullptr) return;
-	
-	const USkeletalMeshSocket* BackpackSocket = Character->GetMesh()->GetSocketByName(FName("BackpackSocket"));
-	if (BackpackSocket && WeaponToAttach)
-	{
-		BackpackSocket->AttachActor(WeaponToAttach, Character->GetMesh());
-		WeaponToAttach->SetOwner(Character);
-		SecondaryWeapon = WeaponToAttach;
+		HandSocket->AttachActor(SecondaryGun, Character->GetArm());
+		SecondaryGun->SetOwner(Character);
+		SecondaryGun->GetWeaponMesh()->SetVisibility(false);
+		SecondaryWeapon = SecondaryGun;
 	}
 }
 
@@ -354,7 +288,7 @@ void UCombatComponent::TraceUnderCrosshairs(FHitResult& TraceHitResult)
 	{
 		FVector Direction = Character->GetBaseAimRotation().Vector();
 		FVector Start = Character->GetCamera()->GetComponentLocation();
-		FVector End = Start + Direction * TRACE_LENGTH;
+		FVector End = Start + Direction * Character->GetTraceLength();
 		FCollisionQueryParams QueryParams;
 		QueryParams.AddIgnoredActor(Character);
 
@@ -432,34 +366,47 @@ void UCombatComponent::SetHUDCrosshairs(float DeltaTime)
 	}
 }
 
-void UCombatComponent::SlashStarted()
-{
-	if (Character == nullptr || !Character->HasAuthority()) return;
-	
-	AMeleeWeapon* MeleeWeapon = Cast<AMeleeWeapon>(EquippedWeapon);
-	if (MeleeWeapon && MeleeWeapon->GetMeleeBox())
-	{
-		MeleeWeapon->GetMeleeBox()->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
-	}
-}
-
-void UCombatComponent::SlashFinished()
-{
-	if (Character == nullptr || !Character->HasAuthority()) return;
-	
-	AMeleeWeapon* MeleeWeapon = Cast<AMeleeWeapon>(EquippedWeapon);
-	if (MeleeWeapon && MeleeWeapon->GetMeleeBox())
-	{
-		MeleeWeapon->GetMeleeBox()->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Ignore);
-	}
-}
-
 void UCombatComponent::OnRep_EquippedWeapon()
 {
 	if (Character)
 	{
-		Character->UpdateHUDAmmo();
+		if (Character->IsLocallyControlled())
+		{
+			Character->UpdateHUDAmmo();
+			AttachToArm(EquippedWeapon);
+		}
+		else
+		{
+			AttachToMesh(EquippedWeapon);
+		}
 	}
+}
+
+void UCombatComponent::OnRep_SecondaryWeapon()
+{
+	if (Character)
+	{
+		if (Character->IsLocallyControlled())
+		{
+			AttachToArm(SecondaryWeapon);
+		}
+		else
+		{
+			AttachToMesh(SecondaryWeapon);
+		}
+	}
+}
+
+void UCombatComponent::AttachToArm(AWeapon* WeaponToAttach)
+{
+	const USkeletalMeshSocket* HandSocket = Character->GetArm()->GetSocketByName(FName("RightHandSocket"));
+	HandSocket->AttachActor(WeaponToAttach, Character->GetArm());
+}
+
+void UCombatComponent::AttachToMesh(AWeapon* WeaponToAttach)
+{
+	const USkeletalMeshSocket* HandSocket = Character->GetMesh()->GetSocketByName(FName("RightHandSocket"));
+	HandSocket->AttachActor(WeaponToAttach, Character->GetMesh());
 }
 
 bool UCombatComponent::CanFire()

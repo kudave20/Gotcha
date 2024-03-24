@@ -26,23 +26,17 @@ public:
 	void FireButtonPressed(bool bPressed);
 	void SwapWeapons();
 	void Reload();
-	void ParryButtonPressed();
 
-	bool Parry(AWeapon* DamageCauser);
-
-	void EquipWeapons(AWeapon* PrimaryGun, AWeapon* SecondaryGun);
-
-	UFUNCTION(BlueprintCallable)
-	void SlashStarted();
-	UFUNCTION(BlueprintCallable)
-	void SlashFinished();
+	void EquipWeapon(AWeapon* PrimaryGun, AWeapon* SecondaryGun);
 
 protected:
 	virtual void BeginPlay() override;
 	
 	void Fire();
+	void FireProjectileWeapon();
 	void FireShotgun();
 	void FireMeleeWeapon();
+	void LocalFire(const FVector_NetQuantize& TraceHitTarget);
 	void ShotgunLocalFire(const TArray<FVector_NetQuantize>& TraceHitTargets);
 	void MeleeLocalFire();
 
@@ -63,12 +57,6 @@ protected:
 	
 	UFUNCTION(Server, Reliable)
 	void ServerSwapWeapons();
-
-	UFUNCTION(Server, Reliable)
-	void ServerParry();
-	
-	void AttachWeaponToRightHand(AWeapon* WeaponToAttach);
-	void AttachWeaponToBackpack(AWeapon* WeaponToAttach);
 
 	void TraceUnderCrosshairs(FHitResult& TraceHitResult);
 	
@@ -92,11 +80,16 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_EquippedWeapon)
 	AWeapon* EquippedWeapon;
 
+	UPROPERTY(ReplicatedUsing = OnRep_SecondaryWeapon)
+	AWeapon* SecondaryWeapon;
+
 	UFUNCTION()
 	void OnRep_EquippedWeapon();
-
-	UPROPERTY(Replicated)
-	AWeapon* SecondaryWeapon;
+	UFUNCTION()
+	void OnRep_SecondaryWeapon();
+	
+	void AttachToArm(AWeapon* WeaponToAttach);
+	void AttachToMesh(AWeapon* WeaponToAttach);
 
 	FHUDPackage HUDPackage;
 
@@ -115,16 +108,8 @@ private:
 	void FireTimerFinished();
 
 	bool CanFire();
-	
-	bool bIsParrying;
-	
-	FTimerHandle ParryTimer;
-
-	void ParryTimerFinished();
 
 	UPROPERTY(Replicated)
 	bool bHoldingFlag = false;
-	
-public:
 	
 };

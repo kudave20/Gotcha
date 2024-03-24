@@ -15,19 +15,6 @@ void AHitScanWeapon::WeaponTraceHit(const FVector& TraceStart, const FVector& Hi
 	UWorld* World = GetWorld();
 	if (World)
 	{
-		// TArray<AActor*> ActorsToIgnore;
-		// ActorsToIgnore.Add(GetOwner());
-		// UKismetSystemLibrary::LineTraceSingle(
-		// 	this,
-		// 	TraceStart,
-		// 	HitTarget,
-		// 	UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		// 	false,
-		// 	ActorsToIgnore,
-		// 	EDrawDebugTrace::Persistent,
-		// 	OutHit,
-		// 	false
-		// );
 		World->LineTraceSingleByChannel(
 			OutHit,
 			TraceStart,
@@ -43,12 +30,12 @@ void AHitScanWeapon::WeaponTraceHit(const FVector& TraceStart, const FVector& Hi
 		{
 			OutHit.ImpactPoint = HitTarget;
 		}
-
-		if (BeamParticles)
+		
+		if (!HasAuthority() && BeamParticle)
 		{
 			UParticleSystemComponent* Beam = UGameplayStatics::SpawnEmitterAtLocation(
 				World,
-				BeamParticles,
+				BeamParticle,
 				TraceStart,
 				FRotator::ZeroRotator,
 				true
